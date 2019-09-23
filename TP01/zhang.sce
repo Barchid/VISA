@@ -23,7 +23,7 @@ exec ('methodes.sci', -1);
 ni = 4;
 
 // Lire les coordonnees des points de la mire dans la scene
-M = read('points.txt', -1, 2)';
+M = read('points.txt', -1, 2)'; 
 np = size(M, 2);
 M = [M; zeros(1, np); ones(1, np)];
 sansZ = [1, 2, 4];
