@@ -28,7 +28,7 @@ Inclure les fichiers d'entete
 using namespace cv;
 using namespace std;
 #include "glue.hpp"
-#include "prenom-nom.hpp"
+#include "sami-barchid.hpp"
 
 /* --------------------------------------------------------------------------
 Macros

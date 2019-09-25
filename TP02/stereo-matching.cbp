@@ -11,6 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="-v -d left.png right.png left.xml right.xml" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -38,10 +39,10 @@
 			<Add library="opencv_imgproc" />
 			<Add library="opencv_imgcodecs" />
 		</Linker>
-		<Unit filename="prenom-nom.cpp" />
-		<Unit filename="prenom-nom.hpp" />
 		<Unit filename="glue.cpp" />
 		<Unit filename="glue.hpp" />
+		<Unit filename="sami-barchid.cpp" />
+		<Unit filename="sami-barchid.hpp" />
 		<Unit filename="stereo-matching.cpp" />
 		<Extensions>
 			<code_completion />
