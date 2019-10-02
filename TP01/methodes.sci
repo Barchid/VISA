@@ -1,3 +1,17 @@
+/// \brief Calcule le NMSE
+function ComputeNMSE(Attendue,Obtenue)
+    diffe = (Attendue - Obtenue) ** 2;
+    nmse = diffe / (Attendue**2);
+    disp(nmse)
+endfunction
+
+/// \brief Calcule le NMSE
+function ComputeMSE(Attendue,Obtenue)
+    diffe = (Attendue - Obtenue) ** 2;
+    nmse = diffe / (Attendue**2);
+    disp(nmse)
+endfunction
+
 // -----------------------------------------------------------------------
 /// \brief Calcule un terme de contrainte a partir d'une homographie.
 ///
@@ -49,7 +63,7 @@ function A = IntrinsicMatrix(b)
     
     // Assemblage de la matrice des paramètres intrinsèques A
     A = [
-        alpha,lambda,u0;
+        alpha,ggamma,u0;
         0, bbeta, v0;
         0, 0, 1
     ];
