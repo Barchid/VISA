@@ -7,7 +7,7 @@
 
 1569418477 /home/m2ivi/barchid/Desktop/VISA/TP02/glue.hpp
 
-1569845808 source:/home/m2ivi/barchid/Desktop/VISA/TP02/stereo-matching.cpp
+1570027668 source:/home/m2ivi/barchid/Desktop/VISA/TP02/stereo-matching.cpp
 	<stdio.h>
 	<opencv2/core.hpp>
 	<opencv2/imgproc.hpp>
@@ -17,9 +17,9 @@
 	"glue.hpp"
 	"sami-barchid.hpp"
 
-1569418477 /home/m2ivi/barchid/Desktop/VISA/TP02/sami-barchid.hpp
+1570027830 /home/m2ivi/barchid/Desktop/VISA/TP02/sami-barchid.hpp
 
-1569853173 source:/home/m2ivi/barchid/Desktop/VISA/TP02/sami-barchid.cpp
+1570026614 source:/home/m2ivi/barchid/Desktop/VISA/TP02/sami-barchid.cpp
 	<stdio.h>
 	<opencv2/core.hpp>
 	<opencv2/imgproc.hpp>

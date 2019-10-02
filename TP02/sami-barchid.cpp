@@ -21,6 +21,7 @@ Inclure les fichiers d'entete
 -------------------------------------------------------------------------- */
 using namespace std;
 #include <stdio.h>
+#include <string>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
@@ -186,28 +187,26 @@ Mat iviDistancesMatrix(const Mat& m2DLeftCorners,
 
             // La droite épipolaire de l'image gauche associée au point de l'image droite ==> d1 dans les slides
             Mat d1 = Ft * m2;
-            double xD1 = d1.at<double>(0,0);
-            double yD1 = d1.at<double>(1,0);
+            double aD1 = d1.at<double>(0,0);
+            double bD1 = d1.at<double>(1,0);
+            double cD1 = d1.at<double>(2,0);
 
             // La droite épipolaire de l'image droite associée au point de l'image gauche ==> d2 dans les slides
             Mat d2 = F  * m1;
-            double xD2 = d2.at<double>(0,0);
-            double yD2 = d2.at<double>(1,0);
+            double aD2 = d2.at<double>(0,0);
+            double bD2 = d2.at<double>(1,0);
+            double cD2 = d2.at<double>(2,0);
 
-            // Distance euclidienne entre m1 et d1
-            double distM1D1 = sqrt(
-                pow((xD1 - xM1), 2)
-                +
-                pow((yD1 - yM1), 2)
-            );
+            // Distance entre point m1 et droite d1 (voir équation de la distance entre point et droite sur https://fr.wikipedia.org/wiki/Distance_d%27un_point_%C3%A0_une_droite)
+            double distM1D1 =
+                abs(xM1 * aD1 + yM1 * bD1 + cD1) / (sqrt(pow(aD1,2) + pow(bD1, 2) ) );
 
-            // Distance euclidienne entre m2 et d2
-            double distM2D2 = sqrt(
-                pow((xD2 - xM2), 2)
-                +
-                pow((yD2 - yM2), 2)
-            );
-            // Distance est la somme des deux distances euclidiennes calculées avant
+
+            // Distance entre point m2 et droite d2 (voir équation de la distance entre point et droite sur https://fr.wikipedia.org/wiki/Distance_d%27un_point_%C3%A0_une_droite)
+            double distM2D2 =
+               abs(xM2 * aD2 + yM2 * bD2 + cD2) / (sqrt(pow(aD2,2) + pow(bD2, 2) ) );
+
+            // Distance est la somme des deux distances calculées avant
             double distance = distM1D1 + distM2D2;
             mDistances.at<double>(i,j) = distance;
         }
@@ -230,7 +229,47 @@ void iviMarkAssociations(const Mat& mDistances,
                          double dMaxDistance,
                          Mat& mRightHomologous,
                          Mat& mLeftHomologous) {
-    // A modifier !
-    // Parcourir les distances et checker la distance ??? Trop simple non ?
+    // TANT QUE [je peux]
+    while(true) {
+        // TROUVER le minimum de la matrice des distances
+        double min, max;
+        Point minLocation, maxLocation;
+        minMaxLoc(mDistances, &min, &max, &minLocation, &maxLocation);
+         //double deb = (mDistances.at<double>(27, 23));
+        // SI [le minimum EST SUPERIEUR À seuil dMaxDistance]
+        if(min >= dMaxDistance) {
+            // on arrête le parcours, on a fini l'algo
+            break;
+        }
+        // SINON
+        else {
+            // SUPPRIMER DU PARCOURS la ligne i et la colonne j du minimum
+            // parce qu'on a trouvé que point i de l'image de gauche et point j de l'image de droite sont des points homologues donc on peut les retirer du parcours
+            // Pour ce faire, nous allons mettre des grosses valeurs dans la matrice des distances comme ça on ne les retrouvera plus
+            mDistances.row(minLocation.y).setTo(Scalar(10000000));
+            mDistances.col(minLocation.x).setTo(Scalar(10000000));
+            double debuuug = (mDistances.at<double>(minLocation.y, minLocation.x));
 
+            // indice de la ligne i est le point leftHomologous
+            mLeftHomologous.push_back(minLocation.y);
+            mRightHomologous.push_back(minLocation.x);
+        }
+    }
+}
+
+void drawHomo(Mat& mImageLeft, Mat& mImageRight, Mat& mLeftHomologous,
+                         Mat& mRightHomologous, Mat& mLeftCorners, Mat& mRightCorners) {
+    Point2d p;
+    int nbPoints = mLeftHomologous.rows;
+    for(unsigned int i = 0; i < nbPoints; i++) {
+        // Tracer cercle image
+        int homo = mLeftHomologous.at<int>(i);
+        Mat m1 = mLeftCorners.col(homo);
+
+        homo = mRightHomologous.at<int>(i);
+        Mat m2 = mRightCorners.col(homo);
+        putText(mImageLeft, std::to_string(i), Point(m1.at<double>(0,0), m1.at<double>(0,1)), FONT_HERSHEY_COMPLEX, 1.0, CV_RGB(118, 185, 0), 1);
+
+        putText(mImageRight, std::to_string(i), Point(m2.at<double>(0,0), m2.at<double>(0,1)), FONT_HERSHEY_COMPLEX, 1.0, CV_RGB(118, 185, 0), 1);
+    }
 }

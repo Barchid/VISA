@@ -189,6 +189,7 @@ int main(int argc, char **argv) {
 
     // Affichage ?
     if(bDisplay) {
+        drawHomo(mLeftColor, mRightColor, mLeftHomologous,  mRightHomologous, mLeftCorners, mRightCorners);
         // Creer les fenetres d'affichage des images
         namedWindow("Left", CV_WINDOW_AUTOSIZE);
         namedWindow("Right", CV_WINDOW_AUTOSIZE);

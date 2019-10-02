@@ -78,3 +78,6 @@ void iviMarkAssociations(const Mat& mDistances,
                          double dMaxDistance,
                          Mat& mRightHomologous,
                          Mat& mLeftHomologous);
+
+void drawHomo(Mat& mImageLeft, Mat& mImageRight, Mat& mLeftHomologous,
+                         Mat& mRightHomologous, Mat& mLeftCorners, Mat& mRightCorners);
