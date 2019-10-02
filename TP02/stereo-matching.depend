@@ -1,0 +1,29 @@
+# depslib dependency file v1.0
+1569418477 source:/home/m2ivi/barchid/Desktop/VISA/TP02/glue.cpp
+	<stdio.h>
+	<opencv2/core.hpp>
+	<opencv2/imgproc.hpp>
+	"glue.hpp"
+
+1569418477 /home/m2ivi/barchid/Desktop/VISA/TP02/glue.hpp
+
+1569845808 source:/home/m2ivi/barchid/Desktop/VISA/TP02/stereo-matching.cpp
+	<stdio.h>
+	<opencv2/core.hpp>
+	<opencv2/imgproc.hpp>
+	<opencv2/highgui.hpp>
+	<opencv2/calib3d.hpp>
+	<getopt.h>
+	"glue.hpp"
+	"sami-barchid.hpp"
+
+1569418477 /home/m2ivi/barchid/Desktop/VISA/TP02/sami-barchid.hpp
+
+1569853173 source:/home/m2ivi/barchid/Desktop/VISA/TP02/sami-barchid.cpp
+	<stdio.h>
+	<opencv2/core.hpp>
+	<opencv2/imgproc.hpp>
+	<opencv2/highgui.hpp>
+	"glue.hpp"
+	"sami-barchid.hpp"
+
