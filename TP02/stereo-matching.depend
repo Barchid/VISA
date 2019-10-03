@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1569418477 source:/home/m2ivi/barchid/Desktop/VISA/TP02/glue.cpp
+1570098315 source:/home/m2ivi/barchid/Desktop/VISA/TP02/glue.cpp
 	<stdio.h>
 	<opencv2/core.hpp>
 	<opencv2/imgproc.hpp>
@@ -19,8 +19,11 @@
 
 1570027830 /home/m2ivi/barchid/Desktop/VISA/TP02/sami-barchid.hpp
 
-1570026614 source:/home/m2ivi/barchid/Desktop/VISA/TP02/sami-barchid.cpp
+1570100168 source:/home/m2ivi/barchid/Desktop/VISA/TP02/sami-barchid.cpp
 	<stdio.h>
+	<string>
+	<stdlib.h>
+	<time.h>
 	<opencv2/core.hpp>
 	<opencv2/imgproc.hpp>
 	<opencv2/highgui.hpp>

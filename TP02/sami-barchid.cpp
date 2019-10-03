@@ -22,6 +22,8 @@ Inclure les fichiers d'entete
 using namespace std;
 #include <stdio.h>
 #include <string>
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
@@ -261,15 +263,26 @@ void drawHomo(Mat& mImageLeft, Mat& mImageRight, Mat& mLeftHomologous,
                          Mat& mRightHomologous, Mat& mLeftCorners, Mat& mRightCorners) {
     Point2d p;
     int nbPoints = mLeftHomologous.rows;
+    srand (time(NULL));
+
     for(unsigned int i = 0; i < nbPoints; i++) {
+        int green = rand() % 255 + 1;
+        int red = rand() % 255 + 1;
+        int blue = rand() % 255 + 1;
+
+        Scalar color = Scalar(blue, green, red);
+
         // Tracer cercle image
         int homo = mLeftHomologous.at<int>(i);
         Mat m1 = mLeftCorners.col(homo);
 
         homo = mRightHomologous.at<int>(i);
         Mat m2 = mRightCorners.col(homo);
-        putText(mImageLeft, std::to_string(i), Point(m1.at<double>(0,0), m1.at<double>(0,1)), FONT_HERSHEY_COMPLEX, 1.0, CV_RGB(118, 185, 0), 1);
 
-        putText(mImageRight, std::to_string(i), Point(m2.at<double>(0,0), m2.at<double>(0,1)), FONT_HERSHEY_COMPLEX, 1.0, CV_RGB(118, 185, 0), 1);
+        //circle(mImageLeft, Point(m1.at<double>(0,0), m1.at<double>(1,0)),5, color);
+        //circle(mImageRight, Point(m2.at<double>(0,0), m2.at<double>(1,0)),5, color);
+
+        putText(mImageLeft, std::to_string(i), Point(m1.at<double>(0,0), m1.at<double>(1,0)), FONT_HERSHEY_COMPLEX_SMALL, 1, CV_RGB(red, green, blue), 1);
+        putText(mImageRight, std::to_string(i), Point(m2.at<double>(0,0), m2.at<double>(1,0)), FONT_HERSHEY_COMPLEX_SMALL, 1, CV_RGB(red, green, blue), 1);
     }
 }
