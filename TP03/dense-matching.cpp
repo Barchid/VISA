@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     bool bVerbose = false; // Affichage de messages d'information
     bool bSave = false; // Enregistrement des images resultat
     int iMaxDisparity = 32; // Disparite maximale
-    int iWindowHalfSize = 2; // Demi-taille de la fenetre de correlation
+    int iWindowHalfSize = 10; // Demi-taille de la fenetre de correlation
 
     /* ------------------------------------------------------------------
     Autres variables
@@ -175,11 +175,11 @@ int main(int argc, char **argv) {
     if (bDisplay)
         cvWaitKey(0);
     // Sauvegarde des resultats
-    if (bSave) {
-        imwrite("left-disparity.png", mLeftDisparity);
-        imwrite("right-disparity.png", mRightDisparity);
-        imwrite("disparity.png", mDisparity);
-        imwrite("validity-mask.png", mValidityMask);
+    if (true) {
+        imwrite("left-disparity-window-10.png", mLeftDisparity);
+        imwrite("right-disparity-window-10.png", mRightDisparity);
+        imwrite("disparity-window-10.png", mDisparity);
+        imwrite("validity-mask-window-10.png", mValidityMask);
     }
     return 0;
 }

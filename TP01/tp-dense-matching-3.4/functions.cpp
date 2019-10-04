@@ -42,16 +42,13 @@ Mat iviLeftDisparityMap(const Mat& mLeftGray,
                         const Mat& mRightGray,
                         int iMaxDisparity,
                         int iWindowHalfSize) {
-    // Applique la formule du SSD
-
-    // Image resultat
-    Mat mLeftDisparityMap(mLeftGray.size(), CV_8U);
+// Image resultat
+Mat mLeftDisparityMap(mLeftGray.size(), CV_8U);
 
     // Initialisation de l'image du minimum de SSD a la valeur maximale
     // pouvant etre obtenue sur une fenetre carree
     Mat mMinSSD = Mat::ones(mLeftGray.size(), CV_64F) *
         pow((double)(2 * iWindowHalfSize + 1), 2.0) * pow(255.0, 2.0);
-
     // Boucler pour tous les decalages possibles
     for (int iShift = 0; iShift < iMaxDisparity; iShift++) {
         // Calculer le cout SSD pour ce decalage
@@ -79,43 +76,9 @@ Mat iviComputeLeftSSDCost(const Mat& mLeftGray,
                           const Mat& mRightGray,
                           int iShift,
                           int iWindowHalfSize) {
-    // Image resultat
-    Mat mLeftSSDCost(mLeftGray.size(), CV_64F);
-
-    // Déclaration de variables (pour coller aux variables utilisées dans la formule de base)
-    int Wx = iWindowHalfSize; // la fenêtre est carrée, Wx = Wy
-    int Wy = iWindowHalfSize;
-    int s = iShift; // décalage s = iShift
-
-
-    // POUR CHAQUE [pixel de l'image]
-    for(unsigned int y = Wy; y < mLeftGray.rows - Wy; y++) { // on évite les pixels qui ne peuvent pas être traités par la fenêtre choisie
-        for(unsigned int x = Wx+s; x < mLeftGray.cols - Wx; x++) { // faire aussi attention au décalage
-            /// ####################################################################
-            /// Appliquer la formule du SSD pour le pixel (x,y) de l'image de gauche
-            /// ####################################################################
-
-            // Récupérer les valeurs de pixels dans l'image de gauche situés dans la window
-            Mat Il;
-            Mat(mLeftGray, Range(y-Wy, y+Wy+1), Range(x-Wx, x+Wx+1)).convertTo(Il, CV_64F);
-
-            // Récupérer les valeurs de pixels dans l'image de gauche situés dans la window avec le décalage s
-            Mat Ir;
-            Mat(mRightGray, Range(y-Wy, y+Wy+1), Range(x-Wx-s, x+Wx+1-s)).convertTo(Ir, CV_64F);
-
-            // Calculer le carré de la différence entre window à gauche et à droite (pour chaque terme)
-            Mat powered = Mat(Il.rows, Il.cols, CV_64F);
-            pow((Il-Ir), 2, powered);
-
-            // Faire la somme de chaque terme pour obtenir le ssd
-            double SSD = sum(powered)[0];
-
-            // Mettre le SSD dans la matrice résultat
-            mLeftSSDCost.at<double>(y,x) = SSD;
-        }
-    }
-    // Calculer la matrice des niveaux de gris
-
+// Image resultat
+Mat mLeftSSDCost(mLeftGray.size(), CV_64F);
+    // A completer!
     return mLeftSSDCost;
 }
 
@@ -133,26 +96,9 @@ Mat iviRightDisparityMap(const Mat& mLeftGray,
                          const Mat& mRightGray,
                          int iMaxDisparity,
                          int iWindowHalfSize) {
-    // Image resultat
-    Mat mRightDisparityMap(mLeftGray.size(), CV_8U);
-
-    // Initialisation de l'image du minimum de SSD a la valeur maximale
-    // pouvant etre obtenue sur une fenetre carree
-    Mat mMinSSD = Mat::ones(mLeftGray.size(), CV_64F) *
-        pow((double)(2 * iWindowHalfSize + 1), 2.0) * pow(255.0, 2.0);
-
-    // Boucler pour tous les decalages possibles
-    for (int iShift = 0; iShift < iMaxDisparity; iShift++) {
-        // Calculer le cout SSD pour ce decalage
-        Mat mSSD = iviComputeRightSSDCost(mLeftGray, mRightGray,
-                                         iShift, iWindowHalfSize);
-        // Conserver le decalage sur les pixels ou le SSD est minimum
-        mRightDisparityMap.setTo((unsigned char)iShift, mSSD < mMinSSD);
-        // Et mettre a jour l'image du SSD minimum
-        mSSD.copyTo(mMinSSD, mSSD < mMinSSD);
-    }
-
-    // On intervertit les images gauches et droites dans l'appel de la fonction leftDisparity et le subterfuge est parfait les kheysssss
+// Image resultat
+Mat mRightDisparityMap(mLeftGray.size(), CV_8U);
+    // A completer!
     return mRightDisparityMap;
 }
 
@@ -170,41 +116,9 @@ Mat iviComputeRightSSDCost(const Mat& mLeftGray,
                            const Mat& mRightGray,
                            int iShift,
                            int iWindowHalfSize) {
-    // Image resultat
-    Mat mRightSSDCost(mLeftGray.size(), CV_64F);
-
-    // Déclaration de variables (pour coller aux variables utilisées dans la formule de base)
-    int Wx = iWindowHalfSize; // la fenêtre est carrée, Wx = Wy
-    int Wy = iWindowHalfSize;
-    int s = iShift; // décalage s = iShift
-
-
-    // POUR CHAQUE [pixel de l'image]
-    for(unsigned int y = Wy; y < mRightGray.rows - Wy; y++) { // on évite les pixels qui ne peuvent pas être traités par la fenêtre choisie
-        for(unsigned int x = Wx; x < mRightGray.cols - Wx - s; x++) { // faire aussi attention au décalage
-            /// ####################################################################
-            /// Appliquer la formule du SSD pour le pixel (x,y) de l'image de gauche
-            /// ####################################################################
-
-            // Récupérer les valeurs de pixels dans l'image de gauche situés dans la window
-            Mat Ir;
-            Mat(mRightGray, Range(y-Wy, y+Wy+1), Range(x-Wx, x+Wx+1)).convertTo(Ir, CV_64F);
-
-            // Récupérer les valeurs de pixels dans l'image de gauche situés dans la window avec le décalage s
-            Mat Il;
-            Mat(mLeftGray, Range(y-Wy, y+Wy+1), Range(x-Wx + s, x+Wx+1 + s)).convertTo(Il, CV_64F); // NOTE : ce qui change ici, c'est le +s par rapport à left
-
-            // Calculer le carré de la différence entre window à gauche et à droite (pour chaque terme)
-            Mat powered = Mat(Ir.rows, Ir.cols, CV_64F);
-            pow((Ir-Il), 2, powered);
-
-            // Faire la somme de chaque terme pour obtenir le ssd
-            double SSD = sum(powered)[0];
-
-            // Mettre le SSD dans la matrice résultat
-            mRightSSDCost.at<double>(y,x) = SSD;
-        }
-    }
+// Image resultat
+Mat mRightSSDCost(mLeftGray.size(), CV_64F);
+    // A completer!
     return mRightSSDCost;
 }
 
@@ -220,18 +134,9 @@ Mat iviLeftRightConsistency(const Mat& mLeftDisparity,
                             const Mat& mRightDisparity,
                             Mat *pmValidityMask) {
 // Images resultat
-Mat mDisparity = mLeftDisparity.clone();
+Mat mDisparity(mLeftDisparity.size(), CV_8U);
 Mat mValidityMask(mLeftDisparity.size(), CV_8U);
     // A completer!
     if (pmValidityMask) *pmValidityMask = mValidityMask;
-
-    if(pmValidityMask) {
-        // SI [disparité gauche = disparité droite] : masque = 0 SINON : masque = 255
-        pmValidityMask->setTo(0); // Tout le monde marqué à 0
-        pmValidityMask->setTo(255, mLeftDisparity != mRightDisparity); // Marquer 255 quand px(left) != px(right)
-    }
-
-    mDisparity.setTo(255, mLeftDisparity != mRightDisparity);
-    print(mDisparity);
     return mDisparity;
 }

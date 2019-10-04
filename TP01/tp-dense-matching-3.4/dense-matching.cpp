@@ -1,6 +1,6 @@
 /* --------------------------------------------------------------------------
-Mise en correspondance de points d'interet detectes dans deux images
-Copyright (C) 2010, 2011  Universite Lille 1
+Stereovision dense par calcul de correlation
+Copyright (C) 2010, 2018  Univ. Lille
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,12 +23,11 @@ Inclure les fichiers d'entete
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-#include <opencv2/calib3d.hpp>
 #include <getopt.h>
 using namespace cv;
 using namespace std;
 #include "glue.hpp"
-#include "sami-barchid.hpp"
+#include "functions.hpp"
 
 /* --------------------------------------------------------------------------
 Macros
@@ -39,27 +38,21 @@ while (*(x) && (*(x)==' ' || *(x)=='=' || *(x)==':')) (x)++;
 { fprintf(stderr, (x)); return(-1); }
 #define ERROR2(x,y) \
 { fprintf(stderr, (x), (y)); return(-1); }
-#define MAX_CORNERS 32
 
 /* --------------------------------------------------------------------------
 Variables statiques
 -------------------------------------------------------------------------- */
 // Options de la ligne de commande
-static const char *pcShortOptions = "m:vdsh";
+static const char *pcShortOptions = "wm:vdsh";
 static const struct option psLongOptions[] =
 {
-    {"maximal-distance", optional_argument, NULL, 'm'},
+    {"window-half-size", optional_argument, NULL, 'w'},
+    {"maximum-disparity", optional_argument, NULL, 'm'},
     {"verbose", no_argument, NULL, 'v'},
     {"display", no_argument, NULL, 'd'},
     {"save", no_argument, NULL, 's'},
     {"help", no_argument, NULL, 'h'},
     {NULL, 0, NULL, 0} // Fin de structure
-};
-static CvScalar sColor[4] = {
-    cvScalar(0, 0, 255), // Rouge
-    cvScalar(0, 255, 0), // Vert
-    cvScalar(255, 0, 0), // Bleu
-    cvScalar(0, 255, 255)  // Jaune
 };
 
 /* --------------------------------------------------------------------------
@@ -72,24 +65,19 @@ int main(int argc, char **argv) {
     ------------------------------------------------------------------ */
     bool bDisplay = false; // Affichage de l'image traitee
     bool bVerbose = false; // Affichage de messages d'information
-    bool bSave = false; // Sauvegarde des images resultat
-    double dMaxDistance = 2.0; // Distance maximale pour une association
+    bool bSave = false; // Enregistrement des images resultat
+    int iMaxDisparity = 32; // Disparite maximale
+    int iWindowHalfSize = 2; // Demi-taille de la fenetre de correlation
 
     /* ------------------------------------------------------------------
     Autres variables
     ------------------------------------------------------------------ */
     int iNextOption; // Lecture d'option sur la ligne de commande
     Mat mLeftGray, mRightGray; // Structures image pour OpenCV
-    Mat mLeftColor, mRightColor; // Structures image pour OpenCV
-    Mat mLeftCorners; // Coins dans l'image gauche
-    Mat mRightCorners; // Coins dans l'image droite
-    Mat mLeftIntrinsic, mRightIntrinsic; // Matrices intrinseques
-    Mat mLeftExtrinsic, mRightExtrinsic; // Matrices extrinseques
-    Mat mFundamental; // Matrice fondamentale
-    Mat mDistances; // Matrice des distances
-    Mat mLeftEpipolarLines, mRightEpipolarLines; // Droites epipolaires
-    Mat mRightHomologous, mLeftHomologous; // Matrices des associations
-    vector<Vec3f> vLines; // Droites epipolaires
+    Mat mLeftDisparity, mRightDisparity; // Disparites G/D
+    Mat mDisparity; // Carte finale des disparites
+    Mat mValidityMask; // Masque de validite
+    double dMin, dMax; // Valeurs maxi et mini d'une image
 
     // Lire les options et les arguments sur la ligne de commande
     do {
@@ -98,9 +86,13 @@ int main(int argc, char **argv) {
                                   psLongOptions, NULL);
         // Traiter l'option
         switch(iNextOption) {
+        case 'w':
+            SKIPDELIMS(optarg);
+            iWindowHalfSize = atoi(optarg);
+            break;
         case 'm':
             SKIPDELIMS(optarg);
-            dMaxDistance = atof(optarg);
+            iMaxDisparity = atoi(optarg);
             break;
         case 'v':
             bVerbose = true;
@@ -119,92 +111,75 @@ int main(int argc, char **argv) {
         }
     } while(iNextOption != -1);
     // Noms de fichiers disponibles ?
-    if(optind + 3 >= argc) {
+    if(optind + 1 >= argc) {
         // Message d'aide et sortie
         gluePrintHelpMessage(*argv, stderr);
         return(-1);
     }
 
     // Chargement des fichiers
-    mLeftColor = imread(argv[optind], CV_LOAD_IMAGE_COLOR);
-    if (mLeftColor.empty())
+    mLeftGray = imread(argv[optind], CV_LOAD_IMAGE_GRAYSCALE);
+    if (mLeftGray.empty())
         ERROR2("Erreur lors de l'ouverture du fichier image gauche '%s'\n",
                argv[optind]);
-    mRightColor = imread(argv[optind + 1], CV_LOAD_IMAGE_COLOR);
-    if (mRightColor.empty())
+    mRightGray = imread(argv[optind + 1], CV_LOAD_IMAGE_GRAYSCALE);
+    if (mRightGray.empty())
         ERROR2("Erreur lors de l'ouverture du fichier image droite '%s'\n",
                argv[optind + 1]);
-    // Chargement des matrices intrinseques et extrinseques
-    glueLoadMatrices(argv[optind + 2], mLeftIntrinsic, mLeftExtrinsic);
-    glueLoadMatrices(argv[optind + 3], mRightIntrinsic, mRightExtrinsic);
-    // Creation des images en niveaux de gris
-    cvtColor(mLeftColor, mLeftGray, CV_RGB2GRAY);
-    cvtColor(mRightColor, mRightGray, CV_RGB2GRAY);
 
-    // Calcule la matrice fondamentale
-    mFundamental = iviFundamentalMatrix(mLeftIntrinsic, mLeftExtrinsic,
-                                        mRightIntrinsic, mRightExtrinsic);
-    if (bVerbose) {
-        // Affiche la matrice fondamentale
-        printf("Matrice fondamentale\n");
-        glueDisplayMatrix(mFundamental);
-    }
-
-    // Detection des coins sur l'image gauche
-    mLeftCorners = iviDetectCorners(mLeftGray, MAX_CORNERS);
-    if (bDisplay) {
-        glueDrawCorners(mLeftColor, mLeftCorners, sColor[0]);
-    }
-    // Calcul des droites epipolaires de ces coins
-    mRightEpipolarLines = mFundamental * mLeftCorners;
-    if (bDisplay) {
-        glueDrawLines(mRightColor, mRightEpipolarLines, sColor[1]);
-    }
-
-    // Detection des coins sur l'image droite
-    mRightCorners = iviDetectCorners(mRightGray, MAX_CORNERS);
-    if (bDisplay) {
-        glueDrawCorners(mRightColor, mRightCorners, sColor[0]);
-    }
-    // Calcul des droites epipolaires de ces coins
-    mLeftEpipolarLines = mFundamental.t() * mRightCorners;
-    if (bDisplay) {
-        glueDrawLines(mLeftColor, mLeftEpipolarLines, sColor[1]);
-    }
-
-    // Uniquement s'il y a au moins un point dans chaque image
-    if (mLeftCorners.cols * mRightCorners.cols) {
-        // Calcule la matrice des distances
-        mDistances = iviDistancesMatrix(mLeftCorners, mRightCorners,
-                                        mFundamental);
-        if (bVerbose) {
-            // Affiche la matrice des distances
-            printf("Distances\n");
-            glueDisplayMatrix(mDistances);
-        }
-        // Definit les associations de points
-        iviMarkAssociations(mDistances, dMaxDistance, mRightHomologous,
-                            mLeftHomologous);
-    }
+    // Calcul de la carte de disparite avec l'image gauche comme reference
+    mLeftDisparity = iviLeftDisparityMap(mLeftGray, mRightGray,
+                                         iMaxDisparity, iWindowHalfSize);
+    // Calcul de la carte de disparite avec l'image droite comme reference
+    mRightDisparity = iviRightDisparityMap(mLeftGray, mRightGray,
+                                           iMaxDisparity, iWindowHalfSize);
+    // Verification gauche droite
+    mDisparity = iviLeftRightConsistency(mLeftDisparity, mRightDisparity,
+                                         &mValidityMask);
 
     // Affichage ?
     if(bDisplay) {
-        drawHomo(mLeftColor, mRightColor, mLeftHomologous,  mRightHomologous, mLeftCorners, mRightCorners);
         // Creer les fenetres d'affichage des images
         namedWindow("Left", CV_WINDOW_AUTOSIZE);
         namedWindow("Right", CV_WINDOW_AUTOSIZE);
+        namedWindow("Left disparity", CV_WINDOW_AUTOSIZE);
+        namedWindow("Right disparity", CV_WINDOW_AUTOSIZE);
+        namedWindow("Disparity", CV_WINDOW_AUTOSIZE);
+        namedWindow("Validity mask", CV_WINDOW_AUTOSIZE);
+        // Ajuster la dynamique des images de disparite
+        minMaxLoc(mLeftDisparity, &dMin, &dMax);
+        if (bVerbose) {
+            printf("Disparite maximale (ref gauche) = %lf\n", dMax);
+        }
+        normalize(mLeftDisparity, mLeftDisparity, 0.0, 255.0, CV_MINMAX);
+        minMaxLoc(mRightDisparity, &dMin, &dMax);
+        if (bVerbose) {
+            printf("Disparite maximale (ref droite) = %lf\n", dMax);
+        }
+        normalize(mRightDisparity, mRightDisparity, 0.0, 255.0, CV_MINMAX);
+        minMaxLoc(mDisparity, &dMin, &dMax);
+        if (bVerbose) {
+            printf("Disparite maximale = %lf\n", dMax);
+        }
+        normalize(mDisparity, mDisparity, 0.0, 255.0, CV_MINMAX);
         // Et afficher
-        imshow("Left", mLeftColor);
-        imshow("Right", mRightColor);
+        imshow("Left", mLeftGray);
+        imshow("Right", mRightGray);
+        imshow("Left disparity", mLeftDisparity);
+        imshow("Right disparity", mRightDisparity);
+        imshow("Disparity", mDisparity);
+        imshow("Validity mask", mValidityMask);
     }
 
     // Si affichage, attendre l'appui sur une touche
     if (bDisplay)
         cvWaitKey(0);
     // Sauvegarde des resultats
-    if (true) {
-        imwrite("left-result-dist-2.png", mLeftColor);
-        imwrite("right-result-dist-2.png", mRightColor);
+    if (bSave) {
+        imwrite("left-disparity.png", mLeftDisparity);
+        imwrite("right-disparity.png", mRightDisparity);
+        imwrite("disparity.png", mDisparity);
+        imwrite("validity-mask.png", mValidityMask);
     }
     return 0;
 }
