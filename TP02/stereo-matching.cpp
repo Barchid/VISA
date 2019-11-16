@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
     bool bDisplay = false; // Affichage de l'image traitee
     bool bVerbose = false; // Affichage de messages d'information
     bool bSave = false; // Sauvegarde des images resultat
-    double dMaxDistance = 2.0; // Distance maximale pour une association
+    double dMaxDistance = 1000.0; // Distance maximale pour une association
 
     /* ------------------------------------------------------------------
     Autres variables
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
     if (bDisplay)
         cvWaitKey(0);
     // Sauvegarde des resultats
-    if (true) {
+    if (false) {
         imwrite("left-result-dist-2.png", mLeftColor);
         imwrite("right-result-dist-2.png", mRightColor);
     }
