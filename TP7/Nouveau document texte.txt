@@ -1,0 +1,13 @@
+EX1 TODO :
+Deux images : une image apprentissage et une image test
+
+Faire clustering kmeans (plugin) sur APPRENTISSAGE
+Choper les différents centroids (boucle) SUR APPRENTISSAGE
+Dupliquer IMAGE TEST (title + "segmentee") 
+POUR CHAQUE pixel de "Image segmentee" (TEST)
+	Calculer distance euclidienne pour chauqe centroid
+	centroid qui a le minimum en distance = classe du pixel
+	Changer couleur pixel de "Image segmentée" en couleur du centroid mini
+
+
+EX2 TODO:
