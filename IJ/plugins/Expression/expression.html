@@ -1,0 +1,389 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<HTML>
+<HEAD>
+<TITLE>Expression Plugin for ImageJ</title>
+<link rel="icon" type="image/x-icon" href="../favicon.ico" />
+<link rel="shortcut icon" type="image/x-icon" href="../favicon.ico" />
+<link rel="stylesheet" href="../styles.css" type="text/css">
+</head>
+<BODY>
+
+<div class="pluginName">
+<b>Expression</b> and <b>ExpressionNT</b>
+</div>
+<P>
+
+<TABLE cellspacing="5">
+<TR valign="top"><TD><B>Author:</b></td><TD>
+Ulf Dittmer (udittmer at yahoo dot com)
+<P></td></tr>
+
+<TR valign="top"><TD><B>Date:</b></td><TD>4/2/2008<P></td></tr>
+
+<TR valign="top"><TD><B>Description:</b></td><TD>
+The plugins on this page apply user-specified formulas to each pixel in an image.
+They can be used to alter existing images, or to create fully synthetic images.
+<P>
+<b>Expression</b> does this by interpreting the formula for each pixel; this makes it
+somewhat slow for complex formulas.
+<b>ExpressionNT</b> compiles the formula as a Java class and executes it; this 
+makes for much faster execution. It also has extra functionality to generate
+fractal images, and supports the HLS and HSV color models.
+In general, you should use <b>ExpressionNT</b>, simply because it is so much faster.
+<P>
+In the <code>presets.txt</code> and <code>presetsNT.txt</code> files some formulas
+are predefined that should give an idea of what the plugin does. They are accessed
+via the <I>Presets</I> menu. New formulas can be given a name and stored
+together with the existing ones.
+<P>
+Filtering of ROIs and image stacks is supported, as is Undo and limited macro recording.
+<P>
+The plugin was inspired by Jim Bumgardners <I>Expression</i> plugin for Photoshop,
+but doesn't have as much functionality. The Photoshop plugin is described
+<a href="http://www.jbum.com/jbum/sware/photoshopexpression3.1PPCbeta.doc">in this Word document</a>,
+which is helpful reading for working with my plugin as well.
+Jim also has a newer Java version called <a href="http://www.jbum.com/jbum/java/pixelpaper/PixelPaper.html">PixelPaper</a>.
+<P></td></tr>
+
+<TR valign="top"><TD><B>Installation:</b></td><TD>
+Download and unzip the <A HREF="http://www.ulfdittmer.com/imagej/Expression.zip">ZIP archive</a>,
+and put the resulting "Expression" folder into your ImageJ plugin directory.
+The archive contains the source and class files for both plugins, two files
+with predefined formulas (<code>presets.txt</code> and <code>presetsNT.txt</code>),
+ and two LUT files (<code>8colors.lut</code> and <code>12colors.lut</code>).
+It also contains this HTML file for reference. All the files should be kept together
+either in the plugins directory, or a subdirectory of it called "Expression".
+<P>Notes for <B>ExpressionNT</b>:
+<UL>
+	<LI>You may need to slightly adapt and recompile the source
+	if you're using a non-Sun JDK, e.g. from IBM or Blackdown.
+	Search for "Sun compiler" in <code>ExpressionNT_.java</code>, and read the comments.
+	<LI>The plugin writes temporary files to disk before compilation, so some hard disk
+	activity is normal. This also means that you can't use it as part of an 
+	applet (unless the applet is signed).
+</UL>
+<P></td></tr>
+
+<TR valign="top"><TD><B>Formulas:</b></td><TD>
+A number of variables and functions are available for use in the expression:
+<PRE>
+x - row coordinate
+y - column coordinate
+w - image width
+h - image height
+rw - ROI width
+rh - ROI height
+i - intensity of the current pixel
+r - red intensity (32 bit color RGB images only), 0..255
+g - green intensity (32 bit color RGB images only), 0..255
+b - blue intensity (32 bit color RGB images only), 0..255
+pi - 3.141592.....
+e - 2.71828.....
+n - when working with a stack, n is set to the number of slices; it's 1 otherwise
+t - when working with a stack, t is set for each image to the images index
+    in the stack (1 &lt;= t &lt;= n); it's 1 otherwise
+maxval - maximum pixel value for this kind of image
+      (255 for 8bit, 65536 for 16bit, 1 for 32bit)
+p0 ... p9 - in macro mode, parameters named p0 through p9 can be passed to the plugin
+	as part of the options, and can be used under those names in the expressions
+
++  -  *  /
+% - modulo, i.e. remainder of integer division
+^ - exponentiation; note that ExpressionNT recognizes the syntax "pow(x,y)"
+        instead, and uses ^ for the exclusive boolean OR of x and y
+sqrt(x) - square root
+sin(x) - sine
+cos(x) - cosine
+tan(x) - tangens
+asin(x) - arcus sine
+acos(x) - arcus cosine
+atan(x) - arcus tangens
+exp(x) - exponential
+ln(x) - natural logarithm (base e)
+log(x) - logarithm base 10
+min(x,y) - minimum of x and y (can take more than 2 parameters)
+max(x,y) - maximum of x and y (can take more than 2 parameters)
+floor(x) - truncates the argument to the next-lower integer
+ceil(x) - truncates the argument to the next-higher integer
+round(x) - truncates the argument to the closest integer
+abs(x) - absolute value
+d - distance from center of image
+a - angle, measured from center of image; between 0 and 2*pi
+? - random number between 0 and 1
+if(a,b,c) - like an if/then/else switch
+        a should be a boolean expression (= <> < <= > >= can be used in it);
+        if a is true the result is b, otherwise c
+</pre>
+The syntax described above is for the <b>Expression</b> plugin;
+the syntax for <b>ExpressionNT</b> differs as follows. If in doubt, take a look
+at the predefined formulas, which show just about all functions in action.
+In general, expressions need to conform to Java syntax.
+<UL>
+<LI>Inequality is tested by <code>"x != y"</code>, not <code>"x &lt;&gt; y"</code>
+<LI><code>"if (a, b, c)"</code> is written as <code>"a ? b : c"</code>, which is the equivalent Java syntax.
+<LI><code>min(x,y[,z])</code> and <code>max(x,y[,z])</code> take two or three parameters, but no more
+<LI><code>?</code> is written as <code>"rnd()</code>"
+<LI><code>d</code> and <code>a</code> are written as <code>"d()"</code> and <code>"a()"</code>, respectively
+<LI><code>mand()</code> is available. It computes the Mandelbrot function, i.e. iteration depth
+        of the complex formula z = z<sup>2</sup> + c before the z value goes out of bounds.<BR>
+	Here are example images of the predefined settings <I>Mandel LUT</i> and <I>Mandel3 LUT</i> in action with the <code>12colors.lut</code> color lookup table:
+	<a href="mandel.jpg" target="new"><code>mand</code></a> and
+	<a href="mandel3.jpg" target="new"><code>mand(3)</code></a>.
+<LI><code>mand(n)</code> is similar to <code>mand()</code>, but uses the formula z = z<sup>n</sup> + c. Higher exponents
+        are slower to compute. <code>mand(2)</code> is the same as <code>mand()</code>.
+<LI><code>i(m), r(m), g(m) and b(m)</code> are available, with <code>1&le;m&le;n</code>. These are the values of the
+	pixels at the current location in all the slices, not just the current one.
+	For m=t, these are the same as i, r, g and b. The <code>'Average Stack'</code> preset shows
+	this, as well as the "Collapse Stack" option (use with a two-image stack).
+<LI><code>i(x,y), r(x,y), g(x,y) and b(x,y)</code> can be used to access the pixel at position (x,y) in the current image.
+	The <code>'Average 3x3'</code> preset shows how to implement a 3x3 averaging filter using these functions.
+<LI><code>i(x,y,m), r(x,y,m), g(x,y,m) and b(x,y,m)</code> are available, with <code>1&le;m&le;n</code>.
+	These are the values of the pixels at location (x,y) in slice "m".
+	For m=t, these are the same as i(x,y), r(x,y), g(x,y) and b(x,y).
+<LI>All of ExpressionNTs functions are defined in the "Expr.java" file in the plugins
+        directory. If you're proficient in Java, it's easy to add more functions.
+<LI>In the HLS and HSV color models, the functions <code>h(), s(), v() and l()</code> can be used
+        in addition to the r, g and b variables to access the color values
+</UL>
+<P></td></tr>
+
+<TR valign="top"><TD><B>Input fields:</b></td><TD>
+<b>R</b> , <b>G</b> and <b>B</b> (or <b>H</b> , <b>L</b> and <b>S</b>
+or <b>H</b> , <b>S</b> and <b>V</b> )<BR>
+For <i>grayscale and 8 bit color</i> images, only the first formula is used
+(in which case it is "I", the pixel intensity).
+<BR>For <i>32 bit RGB</i> images, all 3 fields are used to filter the R, G and B components, respectively.
+In this case, the variable "i" is either the red or the green or the blue intensity,
+depending on which field it is used in. If either one of the G or B fields is empty, or both,
+the "R" formula will be applied instead (but the "i" variable will still mean green or blue, not red).
+It is also possible to use the "r", "g" and "b" variables to refer to particular color components.
+<BR><b>R</b> , <b>G</b> and <b>B</b> should be in the range 0..maxval (unless 
+the values in the Min and Max fields are set differently),
+<b>H</b> in the range 0..360,
+<b>S</b>, <b>L</b> and <b>V</b>  in the range 0..1 .<P>
+<b>RGB / HLS / HSV / Gray menu (ExpressionNT only)</b><BR>
+Determines the color model in which the results are interpreted. If "RGB", the results
+are used unchanged; if "HLS" or "HSV", the values are converted to RGB before being
+displayed; if "Gray", only the first formula is evaluated, and its value is used for all 3 fields.
+<BR>Note that <b>h (Hue)</b> has different meanings in the HLS and HSV models -
+color values differ by 120 from one another (see the presets <code>'HLS Red'</code> and 
+<code>'HSV Red'</code> for an example).
+<P>
+<b>X and Y</b><BR>
+These are the x and y values that correspond to the upper left hand corner of the image.
+<P>
+<b>Functions (ExpressionNT only)</b><BR>
+Clicking this button opens a dialog containing a text entry area. Any functions
+entered in this window (in Java syntax) can be used in the expressions.
+The following defines a function called "funky" that squares its first
+parameter and adds the second:
+<CODE><PRE>
+double funky (double p1, double p2) {
+	return p1 * p1 + p2;
+}
+</PRE></CODE>
+Inside the function, any Java code is possible, like variable declarations,
+if/then/else statements etc. If you're using ImageJ 1.32c or higher, these functions
+are stored when the program is quit, and will be available upon restart without
+having to enter them again.
+<P>
+<b>W and H</b><BR>
+These are the width and height of the image. If width and height are the 
+same values as the image's width and height in pixels, there is a 1-1 
+relationship between numerical coordinates and pixel coordinates.
+<P>
+<b>Center</b><BR>
+If this box is checked, the x and y values entered above are located in the center
+of the image, instead of the upper left hand corner. E.g., x=0 y=0 w=10 h=10
+would effectively mean x=-5...5 and y=-5...5 instead of x=0...10 and y=0...10.
+<P>
+<b>Min and Max</b><BR>
+These fields are used to determine the range of results that are mapped to the intensity of each
+color component. E.g. for 8-bit images, if Min is 0 and Max is 255, there is a
+1-1 correlation. If Max is 1000, then the result will be scaled down so that the
+range 0-1000 can be displayed as 0-255 levels of intensity.
+<P>
+If you are evaluating the expression <code>sin(x)</code>, though, the resulting values will range
+from -1 to +1. In this case, you should set Min to -1 and Max to 1 so the sine wave will appear
+as a fluctuation from black to white (unless you want to use only part of the color spectrum).
+<P>
+The mapping is done only when filtering in RGB or Gray mode, not for HLS or HSV.
+That's because in those color models the 3 fields have different ranges, 
+while for RGB all fields have the same range.
+<BR>The mapping also isn't done for 32-bit grayscale images, because their minimum and
+maximum values are automatically mapped to the minimum and maximum b/w intensity.
+<P>
+Formulas as well as numbers can be used in these fields, e.g. <code>2 * pi</code>.
+<P>
+<b>Wrap</b><BR>
+If the results of the expression are outside of the Min-Max range, this setting determines how
+it is dealt with. If "Wrap" is unchecked the value is pinned to the Min or Max. If "Wrap" is checked,
+the value wraps over. This can be used to create some interesting moire effects
+(try the <code>Default</code> preset with wrap turned on and off for an example).
+<P>
+<b>New Window</b><BR>
+If this is checked the resulting image is opened in a new image window, instead
+of replacing the current image. The type of the new image is the same as the
+current one. If it is checked when filtering a stack, the scrollbar for navigating
+the new stack is for some reason not visible; saving and reopening the image fixes that.
+<P>
+<b>Collapse Stack (ExpressionNT only)</b><BR>
+If this is checked, and "New Window" is also checked, and the source is a stack,
+then the resulting image will be a single image, not a stack. In other words, the
+stack has been 'collapsed' into a single image. This is useful in conjunction with
+formulas containing any of the <code>i(m), r(m), g(m)</code> or <code>b(m)</code> functions.
+<P>
+<b>Current Image Only (ExpressionNT only)</b><BR>
+If this is checked, and the image to be filtered is a stack, only the image currently
+in front will be filtered, not the ones before or behind it.
+<P>
+<b>Max Iter (ExpressionNT only)</b><BR>
+This is the maximum number of iterations that is calculated for the 
+<code>mand()</code> function before returning.
+Higher values make for a more detailed picture, but slow down the calculation.
+The "+" button increases the value by 50%, while the "-" buttons decreases the value by 33%.
+<P>
+<b>Max is 0 (ExpressionNT only)</b><BR>
+Checking this option will cause the <code>mand()</code> function always to return
+a value of 0 if the maximum number of iterations is reached for a particular point,
+instead of the actal number of iterations. This ensures that the
+inner regions of a Mandelbrot image always show the same color. E.g., when using 
+one of the LUT files, these areas will always be black (the LUT can be applied to
+a gray-scale image by using the <I>File/Open-&gt;LUT...</I> menu).
+<P>
+<b>Presets menu</b><BR>
+Frequently used formulas and their settings can be stored permanently and accessed later.
+Simply enter a name for the formula into the 'Presets' text field, and choose 'Add' from the menu.
+The formula becomes part of the menu, and is also stored on disk. To remove a formula,
+choose it from the menu, and then choose 'Delete'. To update settings, choose it from the menu,
+edit the fields as desired, and choose 'Add'. This will replace the old settings.
+The formulas are saved in the <code>presets.txt</code> file (or <code>presetsNT.txt</code>
+for ExpressionNT) in the working directory (from which ImageJ was started).
+The file can also be edited manually, but ImageJ should be closed first to avoid
+any accidental loss of the changes.
+<P>
+<b>Navigation Panel (ExpressionNT only)</b><BR>
+The navigation panel can be used to pan an image and zoom in and out of it. 
+The complete image is recomputed for each pan/zoom. For navigation to 
+work, the X, Y, Width and Height fields may only contain numerical values, not
+formulas. Clicking either OK or Cancel closes the panel; while clicking OK updates the X, 
+Y, Width and Height fields of the Expression dialog, clicking Cancel 
+restores the original values before the navigation panel was opened. 
+Navigation is particularly useful for Mandelbrot images.
+<P></td></tr>
+
+<TR valign="top"><TD><B>Changes:</b></td>
+<TD><b>May 2003</b>
+<UL>
+	<LI> These new versions supercede the previous one that utilized the JEL library.
+	JEL was proving troublesome to integrate with ImageJ, due to ImageJ and JEL both
+	using <code>ClassLoaders</code>; those were interfering with each other.<P>
+	I have tested the plugins on MacOS 9 and X and Windows 2000 and XP.
+	I'd be interested to hear about experiences on other operating systems.
+	<b>Expression</b> shouldn't have problems on any platform, though.
+</ul>
+<b>June 2003</b>
+<UL>
+	<LI>Added the generalized Mandelbrot function <code>mand(n)</code> to <b>ExpressionNT</b>
+	<LI>Added support for the HSV color model to <b>ExpressionNT</b>, and 
+	<code>h(), s(), v()</code> and <code>l()</code> functions for use with the HLS and HSV color models
+</ul>
+<b>August 2003</b>
+<UL>
+	<LI>The <I>Undo</I> menu can now be used to reverse image filtering. Undo does 
+	nothing if "New Window" was checked, because the window can simply be closed.
+	It also doesn't work for the zooming and panning done from the Navigation
+	panel in <b>ExpressionNT</b>.
+	<LI>Added partial support for macro recording and playback. It is possible to 
+	choose a function from the <I>Presets</I> menu and apply it to an image.
+	The macro syntax for <b>Expression</b> is:<BR>
+	<code>run("Expression ", "preset='Default'");</code><BR>
+	and for <b>ExpressionNT</b>:<BR>
+	<code>run("ExpressionNT ", "preset='Default'");</code><BR>
+	where <code>'Default'</code> should be replaced by the name of the preset as it
+	appears in the popup menu. Selecting a function and clicking the "Apply Expression"
+	button is also recorded as such in the Macro Recorder. Note that manual
+	changes to any of the parameters will not be recorded.<BR>
+	If the plugins are called in this fashion, the dialog window is not shown.
+	<LI>Optimized <code>mand()</code> to be about 10% faster than <code>mand(2)</code>.
+</ul>
+<b>January 2004</b>
+<UL>
+	<LI>A warning message is shown if the presets file is not found,
+		but the plugin will now work regardless (used to throw an exception).
+</ul>
+<b>February 2004</b>
+<UL>
+	<LI>When working with stacks in <b>ExpressionNT</b>, it is possible to 'collapse' them.
+		That means to calculate only a single resulting image instead of a full stack.
+		It is also possible to access the values of all pixels at the current (x,y)
+		location in all slices, not just the current one.
+	<LI>Pixel values of floating-point (32-bit) images are no longer scaled to be between
+		the Min and Max values, because ImageJ does that automatically.
+	<LI>In Macro mode it is now possible to pass arbitrary parameters to the plugin.
+		<BR>Thanks to Rudolf Oldenbourg for these suggestions.
+	<LI>The plugin files, including the presets, can now reside in a subdirectory
+		of the plugins directory. <b>Incompatible change</b>: The presets files
+		<i>must</i> be in the same directory as the other files. They can no longer
+		be kept in the ImageJ directory (where they had to be in previous versions).
+</ul>
+<b>March 2004</b>
+<UL>
+	<LI>It is possible to define new functions in <b>ExpressionNT</b>.
+	<LI>Non-rectangular ROIs are now supported.
+</UL>
+<b>March 2005</b>
+<UL>
+	<LI>Added checkbox to only filter the current image of a stack.
+		Thanks to Jerry LeCarpentier for the suggestion.
+	<LI>Fixed problem with saving of Java functions on Windows.
+	<LI>Fixed incorrect setup of Undo.
+	<LI>Better recovery from a compilation error.
+	<LI>No longer filters 8-bit color LUT images, unless they have a pseudo-color LUT or a greyscale LUT.
+		These images should be converted to RGB color first.
+	<LI>Fixed race condition in cases where the filtering takes very little time.
+</UL>
+<b>May 2005</b>
+<UL>
+	<LI>In <b>ExpressionNT</b> it is now possible to access all pixels in all images using the following notation:<BR>
+			<code>i(t)</code> - the value of the pixel at the current (x,y) position in slice t <code>(1 &le; t &le; n)</code><BR>
+			<code>i(x,y)</code> - the value of the pixel at position (x,y) in the current image<BR>
+			<code>i(x,y,t)</code> - the value of the pixel at position (x,y) in slice t <code>(1 &le; t &le; n)</code><BR>
+			In addition, the same functions named "r", "g" and "b" are available for accessing the
+			individual color components of RGB images.
+		 <b>Incompatible change</b>: The <code>I[n]</code> notation for accessing the pixel at the current (x,y) position in
+		 	the other images no longer works. Use <code>i(n)</code> instead.<BR>
+		<b>Caution</b>: When using these functions, you probably want to check the "New Window" option,
+		because the values returned are retrieved from the <i>currently active</i> image objects.
+		That means that the values will have changed for all pixels for which the expression has already been evaluated.
+		Most likely, that's not what you want.
+		<BR>Thanks to Marek Gorywoda for the suggestion.
+</UL>
+<b>July 2005</b>
+<UL>
+	<LI>The Geological Survey of Canada uses the plugin for its publication
+		<a target="new" href="http://geoscan.ess.nrcan.gc.ca/cgi-bin/starfinder/26420/geoscan_e.txt">The measurement of the modal
+		mineralogy of rocks from SEM imagery: the use of Multispec © and ImageJ freeware</a> by J. W. Lydon.
+</UL>
+<b>April 2007</b>
+<UL>
+	<LI><i>underwearfiend</i> blogs about how to alter pictures using some advanced expressions:
+	<a href="http://underwearfiend.isleblog.com/2007/04/23/how-to-make-the-giffords-by-yourself-pt-1">part 1</a>,
+	<a href="http://underwearfiend.isleblog.com/2007/04/14/how-to-make-the-giffords-by-yourself-pt-2">part 2</a>
+</UL>
+<b>June 2007</b>
+<UL>
+	<LI>Fixed a bug (reported by Harry Parker) where an exception would be thrown
+		if a macro tried to select a non-existing preset. Now a warning message is shown.
+</UL>
+<b>April 2008</b>
+<UL>
+	<LI>ExpressionNT now reports any compilation errors it encounters.
+</UL>
+<P></td></tr>
+</table>
+
+<HR>
+<a href="index.html"><b>Back To ImageJ Plugin Page</b></a> | <a href="../index.html"><b>Back To Home Page</b></a>
+</body>
+</html>

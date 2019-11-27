@@ -1,0 +1,12 @@
+// "StartupMacros"
+
+  macro "Developer Menu Built-in Tool" {}
+  macro "Stacks Menu Built-in Tool" {}
+  macro "Brush Built-in Tool" {}
+  macro "Flood Filler Built-in Tool" {}
+  macro "Arrow Built-in Tool" {}
+
+	 macro "AutoRun" {
+		setTool("zoom");	// lo: faire du zoom l'outil par défaut
+		run("Conversions..."," ");	//lo: pas de mise à l'échelle lors des conversions de types d'image (true par défaut)
+	}
