@@ -18,7 +18,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import java.awt.Window.*;
 
-public class FCM_Visa_ implements PlugIn {
+public class HCM_Visa_ implements PlugIn {
 
 	class Vec {
 		int[] data = new int[3]; // *pointeur sur les composantes*/
@@ -41,7 +41,7 @@ public class FCM_Visa_ implements PlugIn {
 		ImagePlus imp;
 		ImagePlus impseg;
 		ImagePlus impJ;
-		IJ.showMessage("Algorithme FCM", "If ready, Press OK");
+		IJ.showMessage("Algorithme HCM", "If ready, Press OK");
 		ImagePlus cw;
 
 		imp = WindowManager.getCurrentImage();
@@ -50,7 +50,7 @@ public class FCM_Visa_ implements PlugIn {
 		int width = ip.getWidth();
 		int height = ip.getHeight();
 
-		impseg = NewImage.createImage("Image segmentée par FCM", width, height, 1, 24, 0);
+		impseg = NewImage.createImage("Image segmentée par HCM", width, height, 1, 24, 0);
 		ipseg = impseg.getProcessor();
 		impseg.show();
 
@@ -62,8 +62,8 @@ public class FCM_Visa_ implements PlugIn {
 		nbclasses = Integer.parseInt(demande);
 		nbpixels = width * height; // taille de l'image en pixels
 
-		demande = JOptionPane.showInputDialog("Valeur de m : ");
-		double m = Double.parseDouble(demande);
+		IJ.showMessage("La valeur de m = 1 tout le temps en HCM");
+		double m = 1;
 
 		demande = JOptionPane.showInputDialog("Nombre itération max : ");
 		int itermax = Integer.parseInt(demande);
@@ -127,7 +127,7 @@ public class FCM_Visa_ implements PlugIn {
 			}
 		}
 		////////////////////////////////
-		// FCM
+		// HCM
 		///////////////////////////////
 
 		imax = nbpixels; // nombre de pixels dans l'image
@@ -177,7 +177,7 @@ public class FCM_Visa_ implements PlugIn {
 		}
 
 		////////////////////////////////////////////////////////////
-		// FIN INITIALISATION FCM
+		// FIN INITIALISATION HCM
 		///////////////////////////////////////////////////////////
 
 		/////////////////////////////////////////////////////////////
@@ -229,15 +229,16 @@ public class FCM_Visa_ implements PlugIn {
 			// Calculate difference between the previous partition and the new partition
 			// (performance index)
 			figJ[iter] = this.performanceIndex(U, distances, m);
+			System.out.println("Index de performance actuel : " + figJ[iter]);
 
 			// SI [les performances d'avant sont meilleures que les performances courantes]
 			if (iter > 0 && Math.abs(figJ[iter - 1]) <= Math.abs(figJ[iter])) {
+				System.out.println("Performance actuelle qui ne s'améliore pas, on sort");
 				// JE ME CASSE
 				break;
 			}
 
 			stab = Math.abs(figJ[iter] - stab);
-
 			iter++;
 
 			////////////////////////////////////////////////////////
@@ -263,17 +264,17 @@ public class FCM_Visa_ implements PlugIn {
 			//////////////////////////////////
 		} // Fin boucle
 
-		double[] xplot = new double[iter];
-		double[] yplot = new double[iter];
-		for (int w = 0; w < iter; w++) {
+		double[] xplot = new double[itermax];
+		double[] yplot = new double[itermax];
+		for (int w = 0; w < itermax; w++) {
 			xplot[w] = (double) w;
 			yplot[w] = (double) figJ[w];
 		}
-		Plot plot = new Plot("Performance Index (FCM)", "iterations", "J(P) value", xplot, yplot);
+		Plot plot = new Plot("Performance Index (HCM)", "iterations", "J(P) value", xplot, yplot);
 		plot.setLineWidth(2);
 		plot.setColor(Color.blue);
 		plot.show();
-	} // Fin FCM
+	} // Fin HCM
 
 	/**
 	 * Calcule "d²_ij" des formules dans les slides, càd la distance au carré entre
@@ -302,33 +303,24 @@ public class FCM_Visa_ implements PlugIn {
 	 * @return
 	 */
 	private double u_ij(int i, int j, double m, double[][] centroids, double[][] D) {
-		double u_ij = 0;
+		// Dans le HCM, l'appartenance du pixel x_j à la classe du centroid v_i est
+		// simple : si v_i est le centroid le plus proche, alors x_j appartient à 100% à
+		// la classe de v_i (C-means simple en gros)
 
-		// SI [la distance de x_j à v_i est égale à 0]
-		if (D[i][j] == 0) {
-			// ALORS le seul degré d'appartenance non nul est u_ij ==> = 1
-			return 1;
-		}
-
-		// POUR CHAQUE [centroid v_k]
+		// POUR CHAQUE [centroid v_k] SAUF v_i
 		for (int k = 0; k < centroids.length; k++) {
+			if (k == i)
+				continue;
 
-			// SI [la distance de x_j à v_k est égale à 0]
-			if (D[k][j] == 0) {
-				// ALORS [le seul degré d'appartenance non-nul de x_j est u_kj = 1
-				return 0; // donc U_ij = 0
+			// SI [la distance d2_ij n'est pas la distance minimale]
+			if (D[i][j] >= D[k][j]) {
+				// ALORS pixel x_j n'appartient pas à classe de centroid v_i
+				return 0; // u_ij = 0
 			}
-
-			u_ij += Math.pow(
-					// rapport des distances avec le centroid et avec chaque centroid
-					D[i][j] / (D[k][j]),
-
-					// Exposant 2/m-1
-					(2 / (m - 1)));
 		}
 
-		u_ij = Math.pow(u_ij, -1); // Faire l'inverse de ce qui a été calculé pour compléter la formule
-		return u_ij;
+		// Si je suis ici, c'est que la distance d2_ij est bien la distance minimale
+		return 1; // u_ij = 1
 	}
 
 	/**
@@ -342,18 +334,18 @@ public class FCM_Visa_ implements PlugIn {
 	 *         paramètres
 	 */
 	private double performanceIndex(double[][] U, double[][] D, double m) {
-		double J_fcm = 0;
+		double J_hcm = 0;
 
 		// POUR CHAQUE [classe]
 		for (int i = 0; i < U.length; i++) {
 			// POUR CHAQUE [pixel]
 			for (int j = 0; j < U[0].length; j++) {
 				// Appliquer la formule
-				J_fcm += Math.pow(U[i][j], m) * D[i][j];
+				J_hcm += Math.pow(U[i][j], m) * D[i][j];
 			}
 		}
 
-		return J_fcm;
+		return J_hcm;
 	}
 
 	/**

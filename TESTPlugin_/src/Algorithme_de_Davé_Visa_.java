@@ -18,7 +18,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import java.awt.Window.*;
 
-public class FCM_Visa_ implements PlugIn {
+public class Algorithme_de_Davé_Visa_ implements PlugIn {
 
 	class Vec {
 		int[] data = new int[3]; // *pointeur sur les composantes*/
@@ -41,7 +41,7 @@ public class FCM_Visa_ implements PlugIn {
 		ImagePlus imp;
 		ImagePlus impseg;
 		ImagePlus impJ;
-		IJ.showMessage("Algorithme FCM", "If ready, Press OK");
+		IJ.showMessage("Algorithme Davé", "If ready, Press OK");
 		ImagePlus cw;
 
 		imp = WindowManager.getCurrentImage();
@@ -50,7 +50,7 @@ public class FCM_Visa_ implements PlugIn {
 		int width = ip.getWidth();
 		int height = ip.getHeight();
 
-		impseg = NewImage.createImage("Image segmentée par FCM", width, height, 1, 24, 0);
+		impseg = NewImage.createImage("Image segmentée par Davé", width, height, 1, 24, 0);
 		ipseg = impseg.getProcessor();
 		impseg.show();
 
@@ -70,6 +70,9 @@ public class FCM_Visa_ implements PlugIn {
 
 		demande = JOptionPane.showInputDialog("Valeur du seuil de stabilité : ");
 		valeur_seuil = Double.parseDouble(demande);
+
+		demande = JOptionPane.showInputDialog("Lambda pour la classe outlier : ");
+		double lambda = Double.parseDouble(demande);
 
 		demande = JOptionPane.showInputDialog("Randomisation améliorée ? ");
 		int improveRandomization = Integer.parseInt(demande);
@@ -93,6 +96,10 @@ public class FCM_Visa_ implements PlugIn {
 		// Matrice des degrés d'appartenance de chaque pixel à chaque classe (matrice
 		// courante)
 		double U[][] = new double[nbclasses][nbpixels];
+
+		// Vecteur des degrés d'appartenance de chaque pixel à la classe "outlier" (la
+		// classe "bruit")
+		double[] U_noise = new double[nbpixels];
 
 		// Matrice des degrés d'appartenance précédente
 		double oldU[][] = new double[nbclasses][nbpixels];
@@ -127,7 +134,7 @@ public class FCM_Visa_ implements PlugIn {
 			}
 		}
 		////////////////////////////////
-		// FCM
+		// Davé
 		///////////////////////////////
 
 		imax = nbpixels; // nombre de pixels dans l'image
@@ -176,8 +183,14 @@ public class FCM_Visa_ implements PlugIn {
 			}
 		}
 
+		// Initialisation du degré d'appartenance à la classe outlier pour chaque pixel
+		// x_j
+		for (j = 0; j < nbpixels; j++) {
+			U_noise[j] = this.u_nj(j, U);
+		}
+
 		////////////////////////////////////////////////////////////
-		// FIN INITIALISATION FCM
+		// FIN INITIALISATION Davé
 		///////////////////////////////////////////////////////////
 
 		/////////////////////////////////////////////////////////////
@@ -226,9 +239,15 @@ public class FCM_Visa_ implements PlugIn {
 				}
 			}
 
+			// Calcule du degré d'appartenance à la classe outlier pour chaque pixel
+			// x_j
+			for (j = 0; j < nbpixels; j++) {
+				U_noise[j] = this.u_nj(j, U);
+			}
+
 			// Calculate difference between the previous partition and the new partition
 			// (performance index)
-			figJ[iter] = this.performanceIndex(U, distances, m);
+			figJ[iter] = this.performanceIndex(U, distances, m, U_noise, lambda);
 
 			// SI [les performances d'avant sont meilleures que les performances courantes]
 			if (iter > 0 && Math.abs(figJ[iter - 1]) <= Math.abs(figJ[iter])) {
@@ -252,9 +271,23 @@ public class FCM_Visa_ implements PlugIn {
 					}
 					int indice = IndiceMaxOfArray(mat_array, nbclasses);
 					int array[] = new int[3];
-					array[0] = (int) centroids[indice][0];
-					array[1] = (int) centroids[indice][1];
-					array[2] = (int) centroids[indice][2];
+
+					// SI [le pixel l a un plus gros degré d'appartenance poour la classe outlier
+					// que pour la classe normale la plus proche]
+					int indMax = IndiceMaxOfArray(U_noise, nbpixels);
+					if (U[indice][l] < U_noise[l]) {
+						System.out.println("C'est du bruit : " + U_noise[l]);
+						// ALORS [le pixel est segmenté en noir (couleur des outliers)]
+						array[0] = 0;
+						array[1] = 0;
+						array[2] = 0;
+					}
+					// SINON [on colorie aux couleurs du centroids]
+					else {
+						array[0] = (int) centroids[indice][0];
+						array[1] = (int) centroids[indice][1];
+						array[2] = (int) centroids[indice][2];
+					}
 					ipseg.putPixel(i, j, array);
 					l++;
 				}
@@ -263,17 +296,17 @@ public class FCM_Visa_ implements PlugIn {
 			//////////////////////////////////
 		} // Fin boucle
 
-		double[] xplot = new double[iter];
-		double[] yplot = new double[iter];
-		for (int w = 0; w < iter; w++) {
+		double[] xplot = new double[itermax];
+		double[] yplot = new double[itermax];
+		for (int w = 0; w < itermax; w++) {
 			xplot[w] = (double) w;
 			yplot[w] = (double) figJ[w];
 		}
-		Plot plot = new Plot("Performance Index (FCM)", "iterations", "J(P) value", xplot, yplot);
+		Plot plot = new Plot("Performance Index (Davé)", "iterations", "J(P) value", xplot, yplot);
 		plot.setLineWidth(2);
 		plot.setColor(Color.blue);
 		plot.show();
-	} // Fin FCM
+	} // Fin Davé
 
 	/**
 	 * Calcule "d²_ij" des formules dans les slides, càd la distance au carré entre
@@ -335,25 +368,37 @@ public class FCM_Visa_ implements PlugIn {
 	 * Calcule l'index de performance de la partition floue P caractérisées par les
 	 * paramètres.
 	 * 
-	 * @param U matrice des degrés d'appartenance
-	 * @param D matrice des distances
-	 * @param m paramètre m
+	 * @param U       matrice des degrés d'appartenance
+	 * @param D       matrice des distances
+	 * @param m       paramètre m
+	 * @param U_noise vecteur contenant les degrés d'appartenance à la classe
+	 *                outlier pour chaque pixel
+	 * @param lambda  paramètre lambda fourni par l'utilisateur au début du
+	 *                programme
 	 * @return l'index de performance pour la partition floue caractérisée par les
 	 *         paramètres
 	 */
-	private double performanceIndex(double[][] U, double[][] D, double m) {
-		double J_fcm = 0;
-
+	private double performanceIndex(double[][] U, double[][] D, double m, double[] U_noise, double lambda) {
+		double J_Dav = 0;
+		double delta2 = this.delta2(lambda, D);
 		// POUR CHAQUE [classe]
 		for (int i = 0; i < U.length; i++) {
 			// POUR CHAQUE [pixel]
 			for (int j = 0; j < U[0].length; j++) {
 				// Appliquer la formule
-				J_fcm += Math.pow(U[i][j], m) * D[i][j];
+				J_Dav += Math.pow(U[i][j], m) * D[i][j];
 			}
 		}
 
-		return J_fcm;
+		// Ajouter le terme avec delta et la classe outlier etc (voir slide 39)
+		double sumOut = 0;
+		// POUR CHAQUE [pixel x_j]
+		for (int j = 0; j < U[0].length; j++) {
+			sumOut += delta2 * Math.pow(U_noise[j], m);
+		}
+
+		J_Dav += sumOut;
+		return J_Dav;
 	}
 
 	/**
@@ -395,8 +440,52 @@ public class FCM_Visa_ implements PlugIn {
 		return v_i;
 	}
 
-	int indice;
-	double min, max;
+	/**
+	 * Calcule le degré d'appartenance du pixel x_j au à la classe "bruit" (= le
+	 * "noisy cluster"). Ce noisy cluster permet de choper les données absurdes dans
+	 * l'image (en gros, les pixels qui sont réellement du bruit)
+	 * 
+	 * @param j indice j de x_j
+	 * @param U vecteur des centroids
+	 * @return
+	 */
+	private double u_nj(int j, double[][] U) {
+		double u_nj = 1.0;
+
+		// POUR CHAQUE [centroid v_i]
+		for (int i = 0; i < U.length; i++) {
+			u_nj -= U[i][j];
+		}
+
+		return u_nj;
+	}
+
+	/**
+	 * Calcule de l'expression delta²
+	 * 
+	 * @param lambda le lambda en paramètre (entré par l'utilisateur au début)
+	 * @param D      matrice des distances
+	 * @return le delta²
+	 */
+	private double delta2(double lambda, double[][] D) {
+		double delta2 = 0.0;
+
+		// Somme des distances au carré
+		// POUR CHAQUE [v_i]
+		for (int i = 0; i < D.length; i++) {
+			// POUR CHAQUE [x_j]
+			for (int j = 0; j < D[0].length; j++) {
+				delta2 += D[i][j];
+			}
+		}
+		delta2 /= D.length * D[0].length;
+		delta2 *= lambda;
+
+		return delta2;
+	}
+
+	public int indice;
+	public double min, max;
 
 //Returns the maximum of the array
 

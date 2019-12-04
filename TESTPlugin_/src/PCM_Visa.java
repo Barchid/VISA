@@ -18,7 +18,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import java.awt.Window.*;
 
-public class FCM_Visa_ implements PlugIn {
+public class PCM_Visa implements PlugIn {
 
 	class Vec {
 		int[] data = new int[3]; // *pointeur sur les composantes*/
@@ -41,7 +41,7 @@ public class FCM_Visa_ implements PlugIn {
 		ImagePlus imp;
 		ImagePlus impseg;
 		ImagePlus impJ;
-		IJ.showMessage("Algorithme FCM", "If ready, Press OK");
+		IJ.showMessage("Algorithme PCM", "If ready, Press OK");
 		ImagePlus cw;
 
 		imp = WindowManager.getCurrentImage();
@@ -50,7 +50,7 @@ public class FCM_Visa_ implements PlugIn {
 		int width = ip.getWidth();
 		int height = ip.getHeight();
 
-		impseg = NewImage.createImage("Image segmentée par FCM", width, height, 1, 24, 0);
+		impseg = NewImage.createImage("Image segmentée par PCM", width, height, 1, 24, 0);
 		ipseg = impseg.getProcessor();
 		impseg.show();
 
@@ -97,6 +97,9 @@ public class FCM_Visa_ implements PlugIn {
 		// Matrice des degrés d'appartenance précédente
 		double oldU[][] = new double[nbclasses][nbpixels];
 
+		// Vecteur des n_i pour chaque classe i
+		double[] N = new double[nbclasses];
+
 		// Tableaux représentant les valeurs RGB pour chaque pixel
 		double red[] = new double[nbpixels];
 		double green[] = new double[nbpixels];
@@ -127,7 +130,7 @@ public class FCM_Visa_ implements PlugIn {
 			}
 		}
 		////////////////////////////////
-		// FCM
+		// PCM
 		///////////////////////////////
 
 		imax = nbpixels; // nombre de pixels dans l'image
@@ -176,8 +179,14 @@ public class FCM_Visa_ implements PlugIn {
 			}
 		}
 
+		// Initialisation des n_i pour chaque classe (pour calculer le terme de pénalité
+		// évitant la solution u_ij = 0 pour tout le monde
+		for (i = 0; i < nbclasses; i++) {
+			N[i] = this.n_i(i, U, distances, m);
+		}
+
 		////////////////////////////////////////////////////////////
-		// FIN INITIALISATION FCM
+		// FIN INITIALISATION PCM
 		///////////////////////////////////////////////////////////
 
 		/////////////////////////////////////////////////////////////
@@ -226,12 +235,19 @@ public class FCM_Visa_ implements PlugIn {
 				}
 			}
 
+			// calcul des n_i pour chaque classe (pour calculer le terme de pénalité
+			// évitant la solution u_ij = 0 pour tout le monde
+			for (i = 0; i < nbclasses; i++) {
+				N[i] = this.n_i(i, U, distances, m);
+			}
+
 			// Calculate difference between the previous partition and the new partition
 			// (performance index)
-			figJ[iter] = this.performanceIndex(U, distances, m);
+			figJ[iter] = this.performanceIndex(U, distances, m, N);
 
 			// SI [les performances d'avant sont meilleures que les performances courantes]
 			if (iter > 0 && Math.abs(figJ[iter - 1]) <= Math.abs(figJ[iter])) {
+				System.out.println("Ca ne s'améliore plus après " + iter + " itérations");
 				// JE ME CASSE
 				break;
 			}
@@ -263,17 +279,17 @@ public class FCM_Visa_ implements PlugIn {
 			//////////////////////////////////
 		} // Fin boucle
 
-		double[] xplot = new double[iter];
-		double[] yplot = new double[iter];
-		for (int w = 0; w < iter; w++) {
+		double[] xplot = new double[itermax];
+		double[] yplot = new double[itermax];
+		for (int w = 0; w < itermax; w++) {
 			xplot[w] = (double) w;
 			yplot[w] = (double) figJ[w];
 		}
-		Plot plot = new Plot("Performance Index (FCM)", "iterations", "J(P) value", xplot, yplot);
+		Plot plot = new Plot("Performance Index (PCM)", "iterations", "J(P) value", xplot, yplot);
 		plot.setLineWidth(2);
 		plot.setColor(Color.blue);
 		plot.show();
-	} // Fin FCM
+	} // Fin PCM
 
 	/**
 	 * Calcule "d²_ij" des formules dans les slides, càd la distance au carré entre
@@ -338,22 +354,36 @@ public class FCM_Visa_ implements PlugIn {
 	 * @param U matrice des degrés d'appartenance
 	 * @param D matrice des distances
 	 * @param m paramètre m
+	 * @param N le vecteur des n_i machin machin jpp laissez-moi manger j'ai faim
+	 *          putain
 	 * @return l'index de performance pour la partition floue caractérisée par les
 	 *         paramètres
 	 */
-	private double performanceIndex(double[][] U, double[][] D, double m) {
-		double J_fcm = 0;
+	private double performanceIndex(double[][] U, double[][] D, double m, double[] N) {
+		double J_PCM = 0;
+
+		// Calcul du terme de pénalité utilisé dans l'équation pour le perf ind du PCM
+		double penalty = 0;
 
 		// POUR CHAQUE [classe]
 		for (int i = 0; i < U.length; i++) {
+			double somme = 0;
+			
 			// POUR CHAQUE [pixel]
 			for (int j = 0; j < U[0].length; j++) {
 				// Appliquer la formule
-				J_fcm += Math.pow(U[i][j], m) * D[i][j];
+				J_PCM += Math.pow(U[i][j], m) * D[i][j];
+
+				// calcule terme pénalité en cours mdr
+				somme += Math.pow(1 - U[i][j], m);
 			}
+			
+			penalty += N[i] * somme;
 		}
 
-		return J_fcm;
+		J_PCM += penalty;
+
+		return J_PCM;
 	}
 
 	/**
@@ -393,6 +423,31 @@ public class FCM_Visa_ implements PlugIn {
 		v_i[2] = sumUX_b / sumU;
 
 		return v_i;
+	}
+
+	/**
+	 * Calcule le n_i pour une classe d'un centroid v_i
+	 * 
+	 * @param i l'indice i de v_i
+	 * @param U la matrice des degrés d'appartenance
+	 * @param D la matrice des distances
+	 * @param m le paramètre m
+	 * @return le n_i
+	 */
+	private double n_i(int i, double[][] U, double[][] D, double m) {
+		double n_i = 0;
+
+		double numerateur = 0;
+		double denominateur = 0;
+
+		// POUR CHAQUE [pixel x_j]
+		for (int j = 0; j < U[0].length; j++) {
+			numerateur += Math.pow(U[i][j], m) * D[i][j];
+			denominateur += Math.pow(U[i][j], m);
+		}
+
+		n_i = numerateur / denominateur;
+		return n_i;
 	}
 
 	int indice;
