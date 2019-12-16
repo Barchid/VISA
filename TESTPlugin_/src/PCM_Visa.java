@@ -58,21 +58,21 @@ public class PCM_Visa implements PlugIn {
 		double stab, seuil, valeur_seuil;
 		int i, j, k, l, imax, jmax, kmax;
 
-		String demande = JOptionPane.showInputDialog("Nombre de classes : ");
-		nbclasses = Integer.parseInt(demande);
+//		String demande = JOptionPane.showInputDialog("Nombre de classes : ");
+		nbclasses = 6;
 		nbpixels = width * height; // taille de l'image en pixels
 
-		demande = JOptionPane.showInputDialog("Valeur de m : ");
-		double m = Double.parseDouble(demande);
+//		demande = JOptionPane.showInputDialog("Valeur de m : ");
+		double m = 2;
 
-		demande = JOptionPane.showInputDialog("Nombre itération max : ");
-		int itermax = Integer.parseInt(demande);
+//		demande = JOptionPane.showInputDialog("Nombre itération max : ");
+		int itermax = 10000;
 
-		demande = JOptionPane.showInputDialog("Valeur du seuil de stabilité : ");
-		valeur_seuil = Double.parseDouble(demande);
+//		demande = JOptionPane.showInputDialog("Valeur du seuil de stabilité : ");
+		valeur_seuil = 0.001;
 
-		demande = JOptionPane.showInputDialog("Randomisation améliorée ? ");
-		int improveRandomization = Integer.parseInt(demande);
+//		demande = JOptionPane.showInputDialog("Randomisation améliorée ? ");
+		int improveRandomization = 0;
 
 		// tableau des centroids courant
 		double centroids[][] = new double[nbclasses][3];
@@ -252,7 +252,7 @@ public class PCM_Visa implements PlugIn {
 				break;
 			}
 
-			stab = Math.abs(figJ[iter] - stab);
+			stab = iter == 0 ? Math.abs(figJ[iter] - stab) : Math.abs(figJ[iter] - figJ[iter-1]);
 
 			iter++;
 
@@ -279,9 +279,9 @@ public class PCM_Visa implements PlugIn {
 			//////////////////////////////////
 		} // Fin boucle
 
-		double[] xplot = new double[itermax];
-		double[] yplot = new double[itermax];
-		for (int w = 0; w < itermax; w++) {
+		double[] xplot = new double[iter];
+		double[] yplot = new double[iter];
+		for (int w = 0; w < iter; w++) {
 			xplot[w] = (double) w;
 			yplot[w] = (double) figJ[w];
 		}

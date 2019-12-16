@@ -58,17 +58,17 @@ public class HCM_Visa_ implements PlugIn {
 		double stab, seuil, valeur_seuil;
 		int i, j, k, l, imax, jmax, kmax;
 
-		String demande = JOptionPane.showInputDialog("Nombre de classes : ");
-		nbclasses = Integer.parseInt(demande);
+//		String demande = JOptionPane.showInputDialog("Nombre de classes : ");
+		nbclasses = 6;
 		nbpixels = width * height; // taille de l'image en pixels
 
-		IJ.showMessage("La valeur de m = 1 tout le temps en HCM");
+//		IJ.showMessage("La valeur de m = 1 tout le temps en HCM");
 		double m = 1;
 
-		demande = JOptionPane.showInputDialog("Nombre itération max : ");
-		int itermax = Integer.parseInt(demande);
+//		demande = JOptionPane.showInputDialog("Nombre itération max : ");
+		int itermax = 10000;
 
-		demande = JOptionPane.showInputDialog("Valeur du seuil de stabilité : ");
+		String demande = JOptionPane.showInputDialog("Valeur du seuil de stabilité : ");
 		valeur_seuil = Double.parseDouble(demande);
 
 		demande = JOptionPane.showInputDialog("Randomisation améliorée ? ");
@@ -238,7 +238,7 @@ public class HCM_Visa_ implements PlugIn {
 				break;
 			}
 
-			stab = Math.abs(figJ[iter] - stab);
+			stab = iter == 0 ? Math.abs(figJ[iter] - stab) : Math.abs(figJ[iter] - figJ[iter-1]);
 			iter++;
 
 			////////////////////////////////////////////////////////
@@ -264,9 +264,9 @@ public class HCM_Visa_ implements PlugIn {
 			//////////////////////////////////
 		} // Fin boucle
 
-		double[] xplot = new double[itermax];
-		double[] yplot = new double[itermax];
-		for (int w = 0; w < itermax; w++) {
+		double[] xplot = new double[iter];
+		double[] yplot = new double[iter];
+		for (int w = 0; w < iter; w++) {
 			xplot[w] = (double) w;
 			yplot[w] = (double) figJ[w];
 		}

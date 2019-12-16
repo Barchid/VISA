@@ -11,3 +11,33 @@ POUR CHAQUE pixel de "Image segmentee" (TEST)
 
 
 EX2 TODO:
+
+ACP
+
+Récupérer image couleur
+Transformer de RGB en stack d'images (trois images pour R G et B)
+On fait ACP
+On sélectionner résultat ACP
+On met bien en 8 bits (car ACP est un calc matriciel)
+Après, on a une image de stacks
+On repasse en RGB
+On a une étape intermédiaire qui est de passer par une stack d'images
+
+
+Plus valeur propre élevée, plus la discrimination est importante (toujours prendre première composante)
+On prend première composante
+
+
+run("8-bit")
+run("s
+
+IMG apprentissage
+	ACP
+	k-means
+	récupérer les centroids (voir ex 1)
+
+IMG test
+	ACP
+								
+	appliquer centroids
+	
