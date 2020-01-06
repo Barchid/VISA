@@ -4,7 +4,7 @@ img_test = getTitle();
 // Path de l'image d'apprentissage qui va servir à la segmentation
 img_apprentissage = getString("Choisir le path de l'image d'apprentissage à ouvrir", "D:/M2/VISA/VISA/TP7/images_2018/cas_3_dalton15.bmp");
 
-// Nombre de classes défini pour clustering k-means de l'image d'apprentissage
+// Nombre de classes défini pour clustering k-means de l'image d'apprentissage (il en faut 4 pour les images de cas3)
 nbClasses = getNumber ("Choisissez le nombre de classes pour le clustering k-means.",4);
 
 // Choisir l'espace de couleur entre RGB ou HSB

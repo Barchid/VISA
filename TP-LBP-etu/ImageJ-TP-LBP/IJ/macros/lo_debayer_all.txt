@@ -1,0 +1,18 @@
+orders = newArray("R-G-R-G","B-G-B-G","G-R-G-R","G-B-G-B");
+algorithms = newArray("Replication", "Bilinear", "Smooth Hue", "Adaptive Smooth Hue");
+selectWindow("lighthouse.png");
+
+for (order=0; order<orders.length; order++) {
+	for (algo=0; algo<algorithms.length; algo++) {
+		run("Debayer lo", "order="+orders[order]);	
+		run("16-bit");
+		run("Debayer Image", "order="+orders[order]+" demosaicing="+algorithms[algo]+" radius=2 radius=2 display");
+		rename(algorithms[algo]+", CFA="+orders[order]);
+		selectWindow("RGB Stack");
+		close();
+		selectWindow("CFA");
+		close();
+		selectWindow("lighthouse.png");
+	}
+}
+

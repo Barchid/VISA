@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item key="isRegEx" value="false"/>
+		<item key="selection" value="option_seuilM"/>
+		<item key="casesensitive" value="false"/>
+		<item key="incremental" value="false"/>
+		<item key="wrap" value="false"/>
+		<item key="wholeword" value="false"/>
+		<list key="findhistory">
+			<item value="option_seuilM"/>
+			<item value="highThreshold"/>
+			<item value="lowThreshold"/>
+			<item value="ajouter"/>
+			<item value="lo:"/>
+			<item value="close"/>
+			<item value="window"/>
+			<item value="addItem"/>
+			<item value="addItem("/>
+		</list>
+		<list key="replacehistory">
+			<item value="seuilHaut"/>
+			<item value="seuilBas"/>
+			<item value="samples_ip"/>
+			<item value="pixel_value"/>
+		</list>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item key="DIALOG_WIDTH" value="294"/>
+		<item key="DIALOG_FONT_NAME" value="1|.AppleSystemUIFont|11.0|0|COCOA|1|.AppleSystemUIFont"/>
+		<item key="DIALOG_HEIGHT" value="408"/>
+		<item key="DIALOG_Y_ORIGIN" value="106"/>
+		<item key="DIALOG_X_ORIGIN" value="932"/>
+	</section>
+	<section name="org.eclipse.ui.texteditor.GotoLineAction$GotoLineDialog_dialogBounds">
+		<item key="DIALOG_X_ORIGIN" value="729"/>
+		<item key="DIALOG_Y_ORIGIN" value="403"/>
+	</section>
+</section>

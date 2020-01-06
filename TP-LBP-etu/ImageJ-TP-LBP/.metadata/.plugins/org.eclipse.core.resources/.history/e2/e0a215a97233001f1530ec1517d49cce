@@ -1,0 +1,401 @@
+import ij.IJ;
+import ij.ImagePlus;
+import ij.gui.GenericDialog;
+import ij.plugin.filter.PlugInFilter;
+import ij.process.ByteProcessor;
+import ij.process.ImageProcessor;
+ 
+import java.util.ArrayList;
+import java.util.List;
+ 
+/**
+ * Canny Filter (edge detector)
+ * 
+ * @author Xavier Philippeau
+ *
+ */
+public class Canny_ implements PlugInFilter {
+ 
+	private int[][] gaussianKernel = null;
+	private int gaussianKernelFactor = 0;
+ 
+	private int lowThreshold=0;
+	private int highThreshold=0;
+ 
+	// About...
+	private void showAbout() {
+		IJ.showMessage("Canny...","Canny Filter by Pseudocode");
+	}
+	
+	public int setup(String arg, ImagePlus imp) {
+ 
+		// about...
+		if (arg.equals("about")) {
+			showAbout(); 
+			return DONE;
+		}
+ 
+		// else...
+		if (imp==null) return DONE;
+ 
+		// Configuration dialog.
+		GenericDialog gd = new GenericDialog("Parameters");
+		gd.addNumericField("Gaussian kernel size",7,0);
+		gd.addNumericField("Gaussian sigma2",3.0,1);
+		gd.addNumericField("Hysteresis low value",30,0);
+		gd.addNumericField("Hysteresis high value",100,0);
+		
+		int gaussianwindow = 0;
+		double gaussiansigma2 = 0;
+		int lowvalue = 0;
+		int highvalue = 0;
+		
+		while(true) {
+			gd.showDialog();
+			if ( gd.wasCanceled() )	return DONE;
+		
+			gaussianwindow = (int) gd.getNextNumber();
+			gaussiansigma2 = (double) gd.getNextNumber();
+			lowvalue       = (int) gd.getNextNumber();
+			highvalue      = (int) gd.getNextNumber();
+			
+			if (gaussianwindow<=0) continue;
+			if (gaussiansigma2<=0) continue;
+			if (lowvalue<=0) continue;
+			if (highvalue<lowvalue) continue;
+			break;
+		}
+		gd.dispose();
+		
+		initGaussianKernel(gaussianwindow,gaussiansigma2);
+		this.lowThreshold=lowvalue;
+		this.highThreshold=highvalue;
+ 
+		return PlugInFilter.DOES_8G;
+	}
+	
+	public void run(ImageProcessor ip) {
+ 
+		// ImageProcessor -> ByteProcessor conversion
+		ByteProcessor bp = new ByteProcessor(ip.getWidth(),ip.getHeight());
+		for (int y = 0; y < ip.getHeight(); y++) {
+			for (int x = 0; x < ip.getWidth(); x++) {
+				bp.set(x,y,ip.getPixel(x,y));
+			}
+		}
+ 
+		// canny filter
+		ByteProcessor newbp = filter( bp, this.lowThreshold, this.highThreshold );
+		
+		// ByteProcessor -> ImageProcessor conversion
+		ImageProcessor out = new ByteProcessor(ip.getWidth(),ip.getHeight());
+		for (int y = 0; y < ip.getHeight(); y++) {
+			for (int x = 0; x < ip.getWidth(); x++) {
+				out.set(x,y,newbp.get(x,y));
+			}
+		}
+		ImagePlus newImg = new ImagePlus("Canny Filter Result", out);
+		newImg.show();
+		
+	}
+	
+	// ---------------------------------------------------------------------------------
+	
+ 
+	/**
+	 * Compute the gaussian kernel G(x,y) = Exp[ - (x^2+y^2)/(2*sigma^2) ]
+	 * 
+	 * @param window size of the kernel
+	 * @param sigma std-dev of the gaussian
+	 */
+	private void initGaussianKernel(int window, double sigma2) {
+		int aperture = window/2;
+		this.gaussianKernel = new int[2*aperture+1][2*aperture+1];
+ 
+		// factor to have only integers in the kernel 
+		int intFactor = 1000;
+		
+		this.gaussianKernelFactor = 0;
+		for(int dy=-aperture;dy<=aperture;dy++) {
+			for(int dx=-aperture;dx<=aperture;dx++) {
+				double e = Math.exp( - (dx*dx+dy*dy) / (2*sigma2) );
+				int k = (int) Math.rint(intFactor * e); 
+				this.gaussianKernel[dx+aperture][dy+aperture]=k;
+				this.gaussianKernelFactor += k;
+			}
+		}
+	}
+ 
+	/**
+	 * Histogram stretching
+	 * 
+	 * @param c Image map
+	 */
+	public static void histogramStretch(ByteProcessor bp) {
+		int width = bp.getWidth();
+		int height = bp.getHeight();
+		
+		// search min/max value in the image 
+		int min=255,max=0;
+		for (int y=0; y<height; y++) {
+			for (int x=0; x<width; x++) {
+				int v =  bp.get(x, y);
+				if (v<min) min=v;
+				if (v>max) max=v;
+			}
+		}
+		
+		// compute translation table
+		int color[] = new int[256];
+		for(int i=0;i<256;i++) {
+			double t = (double)(i-min)/(double)(max-min);
+			if (t<0) t=0;
+			if (t>1) t=1;
+			int v = (int)(255*t);
+			color[i] = v;
+		}
+		
+		// replace value in the image
+		for (int y=0; y<height; y++) {
+			for (int x=0; x<width; x++) {
+				int v =  bp.get(x, y);
+				bp.set(x, y, color[v]);
+			}
+		}
+	}
+	
+	/**
+	 * Perform convolution (Image x Kernel) at a single point
+	 * 
+	 * @param c Image map
+	 * @param x x coord of the computation
+	 * @param y y coord of the computation
+	 * @param kernel the kernel matrix
+	 * @param factor the kernel factor
+	 * @return convolution result
+	 */
+	private int convolve(ByteProcessor bp, int x, int y, int[][] kernel, int factor) {
+		int width = bp.getWidth();
+		int height = bp.getHeight();
+		
+		// assume a square kernel
+		int aperture = kernel[0].length/2;  
+ 
+		int v = 0;
+		for(int dy=-aperture;dy<=aperture;dy++) {
+			for(int dx=-aperture;dx<=aperture;dx++) {
+				int xk = x + dx;
+				int yk = y + dy;
+				if (xk<0) xk=0;
+				if (xk>=width) xk=width-1;
+				if (yk<0) yk=0;
+				if (yk>=height) yk=height-1;
+				int vk = bp.getPixel(xk,yk);
+				v += kernel[aperture+dy][aperture+dx] * vk;
+			}
+		}
+		v/=factor;
+		
+		return v;
+	}
+	
+ 
+	/**
+	 * Compute the local gradient
+	 * 
+	 * @param c Image map
+	 * @param x x coord of the computation (int)
+	 * @param y y coord of the computation (int)
+	 * @return norme and direction (-pi...pi) of the gradient
+	 */
+	private double[] gradient(ByteProcessor bp, int x, int y) {
+		int width = bp.getWidth();
+		int height = bp.getHeight();
+ 
+		int px = x - 1;  // previous x
+		int nx = x + 1;  // next x
+		int py = y - 1;  // previous y
+		int ny = y + 1;  // next y
+		
+		// limit to image dimension
+		if (px < 0)	px = 0;
+		if (nx >= width) nx = width - 1;
+		if (py < 0)	py = 0;
+		if (ny >= height) ny = height - 1;
+		
+		// Intesity of the 8 neighbors
+		int Ipp = bp.getPixel(px,py);
+		int Icp = bp.getPixel( x,py);
+		int Inp = bp.getPixel(nx,py);
+		int Ipc = bp.getPixel(px, y);
+		int Inc = bp.getPixel(nx, y);
+		int Ipn = bp.getPixel(px,ny);
+		int Icn = bp.getPixel( x,ny);
+		int Inn = bp.getPixel(nx,ny);
+		
+		// Local gradient
+		double r2 = 2*Math.sqrt(2);
+		double gradx = (Inc-Ipc)/2.0 + (Inn-Ipp)/r2 + (Inp-Ipn)/r2; // horizontal + 2 diagonals
+		double grady = (Icn-Icp)/2.0 + (Inn-Ipp)/r2 + (Ipn-Inp)/r2; // vertical + 2 diagonals
+		
+		// compute polar coordinates
+		double norme = Math.sqrt(gradx*gradx+grady*grady);
+		double angle = Math.atan2(grady, gradx);
+		
+		// multiply norme by 8/3, to have the same values as Sobel Kernel 3x3
+		return new double[] { norme*8.0/3.0, angle };
+	}
+ 
+	
+	/**
+	 * Compute the local gradient (subpixel with bilinear interpolation)
+	 * 
+	 * @param c Image map
+	 * @param x x coord of the computation (double)
+	 * @param y y coord of the computation (double)
+	 * @return norme and direction (-pi...pi) of the gradient
+	 */
+	 private double[] gradientInterpolated(ByteProcessor bp, double x, double y) {
+		 
+		 double wx = x - (int)x;
+		 double wy = y - (int)y;
+		 
+		 double[] Gpp = gradient(bp,(int)x,(int)y);
+		 double[] Gnp = gradient(bp,(int)x+1,(int)y);
+		 double[] Gpn = gradient(bp,(int)x,(int)y+1);
+		 double[] Gnn = gradient(bp,(int)x+1,(int)y+1);
+		 
+		 double norme = (1-wx)*(1-wy)*Gpp[0] + wx*(1-wy)*Gnp[0] + (1-wx)*wy*Gpn[0] + wx*wy*Gnn[0];
+		 double angle = (1-wx)*(1-wy)*Gpp[1] + wx*(1-wy)*Gnp[1] + (1-wx)*wy*Gpn[1] + wx*wy*Gnn[1];
+		 
+		 return new double[] { norme, angle };
+	 }
+	
+	
+	/**
+	 * compute if a position is a local maxima
+	 * 
+	 * @param c Image map
+	 * @param x x coord of the computation
+	 * @param y y coord of the computation
+	 * @return true if position is a local maxima
+	 */
+	private boolean isLocalMaxima(ByteProcessor bp, int x, int y) {
+ 
+		// gradient at current position
+		double[] grad = gradient(bp,x,y);
+		
+		// gradient direction
+		double gx = Math.cos(grad[1]);
+		double gy = Math.sin(grad[1]);
+		
+		// gradient value at next position in the gradient direction
+		double nx = x + gx;
+		double ny = y + gy;
+		double[] gradn = gradientInterpolated(bp,nx,ny);
+			
+		// gradient value at previous position in the gradient direction
+		double px = x - gx;
+		double py = y - gy;
+		double[] gradp = gradientInterpolated(bp,px,py);
+ 
+		// is the current gradient value a local maxima ?
+ 
+		// synthetic image
+		if (grad[0]==gradn[0] && grad[0]!=gradp[0]) return (x>nx || y>ny);
+		if (grad[0]!=gradn[0] && grad[0]==gradp[0]) return (x>px || y>py);
+		
+		// real world image
+		double EPSILON=1E-7;
+		if ((grad[0]-gradn[0])<EPSILON) return false;
+		if ((grad[0]-gradp[0])<EPSILON) return false;
+		
+		return true;
+	}
+	
+	/**
+	 * Perfom Canny filtering
+	 * 
+	 * @param c Image map
+	 * @param lowThreshold low value of the hysteresis
+	 * @param highThreshold high value of the hysteresis
+	 * @return filtered image map
+	 */
+	public ByteProcessor filter(ByteProcessor c, int lowThreshold, int highThreshold) {
+		int width = c.getWidth();
+		int height = c.getHeight();
+ 
+		// Gaussian filter
+		ByteProcessor bpg = new ByteProcessor(width,height);
+		for (int y=0; y<height; y++) {
+			for (int x=0; x<width; x++) {
+				int v = convolve(c,x,y,this.gaussianKernel,this.gaussianKernelFactor);
+				bpg.set(x,y,v);
+			}
+		}
+		
+		// histogram stretching (compensate the loss of energy caused by gaussian filtering)
+		histogramStretch(bpg);
+		
+		ByteProcessor out = new ByteProcessor(width,height);
+		List<int[]> highpixels = new ArrayList<int[]>();
+		
+		// gradient thresholding
+		for (int y=0; y<height; y++) {
+			for (int x=0; x<width; x++) {
+				
+				// gradient intesity
+				double g = gradient(bpg,x,y)[0];
+				
+				// low-threshold -> not an edge
+				if (g<lowThreshold) continue;
+				
+				// not a local maxima -> not an edge
+				if (!isLocalMaxima(bpg,x,y)) continue;
+				
+				// high-threshold -> is an edge
+				if (g>highThreshold) {
+					out.set(x,y,255);
+					highpixels.add(new int[]{x,y});
+					continue;
+				}
+				
+				// between thresholds -> "unknown state" (depends on neighbors)
+				out.set(x,y,128);
+			}
+		}
+		
+		// edge continuation
+		int[] dx8 = new int[] {-1, 0, 1, 1, 1, 0,-1,-1};
+		int[] dy8 = new int[] {-1,-1,-1, 0, 1, 1, 1, 0};
+		List<int[]> newhighpixels = new ArrayList<int[]>();
+		
+		while(!highpixels.isEmpty()) {
+			newhighpixels.clear();
+			for(int[] pixel : highpixels) {
+				int x=pixel[0], y=pixel[1];
+					
+				// move low-state pixel in the 3x3 neighborhood to high-state
+				for(int k=0;k<8;k++) {
+					int xk=x+dx8[k], yk=y+dy8[k];
+					if (xk<0 || xk>=width) continue;
+					if (yk<0 || yk>=height) continue;
+					if (out.get(xk, yk)==128) {
+						out.set(xk, yk, 255);
+						newhighpixels.add(new int[]{xk, yk});
+					}
+				}
+			}
+			
+			// swap highpixels lists
+			List<int[]> swap = highpixels; highpixels = newhighpixels; newhighpixels = swap;
+		}
+ 
+		// remove remaining low-state pixels
+		for (int y=0; y<height; y++)
+			for (int x=0; x<width; x++)
+				if (out.get(x, y)!=255) out.set(x,y,0);
+		
+		return out;
+	}
+}

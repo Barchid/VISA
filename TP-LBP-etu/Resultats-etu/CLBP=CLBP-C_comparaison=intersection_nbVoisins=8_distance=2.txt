@@ -1,0 +1,77 @@
+ exp�rienceD:\M2\VISA\VISA\TP-LBP-etu\\Resultats-etu\CLBP=CLBP-C_comparaison=intersection_nbVoisins=8_distance=2.txt
+================================================
+AMP = 0.8778
+================================================
+================================================
+taux global de bonne classification (%) au sens du 1 pppV = 83.3333
+================================================
+================================================
+taux global de bonne classification (%) au sens du _Total_Rang des 1 MEILLEURS prototypes = 83.3333
+================================================
+================================================
+taux global de bonne classification (%) au sens du _Total_Rang de TOUS LES PROTOTYPES = 66.6667
+================================================
+================================================
+ exp�rienceD:\M2\VISA\VISA\TP-LBP-etu\\Resultats-etu\CLBP=CLBP-C_comparaison=intersection_nbVoisins=8_distance=2.txt
+ classification par le 1 ppV
+================================================
+1ppv Nb images bien class�es de la classe [0.000]=3.00000
+1ppv Nb images bien class�es de la classe [1.000]=3.00000
+1ppv Nb images bien class�es de la classe [2.000]=2.00000
+1ppv Nb images bien class�es de la classe [3.000]=2.00000
+1ppv  image test:000001.bmp numero de image la + proche:000004.bmp de la classe la + proche:0.0000
+1ppv  image test:000003.bmp numero de image la + proche:000004.bmp de la classe la + proche:0.0000
+1ppv  image test:000005.bmp numero de image la + proche:000000.bmp de la classe la + proche:0.0000
+1ppv  image test:000021.bmp numero de image la + proche:000022.bmp de la classe la + proche:1.0000
+1ppv  image test:000023.bmp numero de image la + proche:000020.bmp de la classe la + proche:1.0000
+1ppv  image test:000025.bmp numero de image la + proche:000022.bmp de la classe la + proche:1.0000
+1ppv  image test:000041.bmp numero de image la + proche:000044.bmp de la classe la + proche:2.0000
+1ppv  image test:000043.bmp numero de image la + proche:000044.bmp de la classe la + proche:2.0000
+1ppv  image test:000045.bmp numero de image la + proche:000000.bmp de la classe la + proche:0.0000
+1ppv  image test:000061.bmp numero de image la + proche:000062.bmp de la classe la + proche:3.0000
+1ppv  image test:000063.bmp numero de image la + proche:000060.bmp de la classe la + proche:3.0000
+1ppv  image test:000065.bmp numero de image la + proche:000020.bmp de la classe la + proche:1.0000
+================================================
+ exp�rienceD:\M2\VISA\VISA\TP-LBP-etu\\Resultats-etu\CLBP=CLBP-C_comparaison=intersection_nbVoisins=8_distance=2.txt
+ classification par le total Rang ppV
+================================================
+kppv Nb images bien class�es au sens du Total Rang de la classe [0.000]=3.00000
+kppv Nb images bien class�es au sens du Total Rang de la classe [1.000]=3.00000
+kppv Nb images bien class�es au sens du Total Rang de la classe [2.000]=2.00000
+kppv Nb images bien class�es au sens du Total Rang de la classe [3.000]=2.00000
+================================================
+kppv image test:0 numero de la classe la + proche:0.0000
+kppv image test:1 numero de la classe la + proche:0.0000
+kppv image test:2 numero de la classe la + proche:0.0000
+kppv image test:3 numero de la classe la + proche:1.0000
+kppv image test:4 numero de la classe la + proche:1.0000
+kppv image test:5 numero de la classe la + proche:1.0000
+kppv image test:6 numero de la classe la + proche:2.0000
+kppv image test:7 numero de la classe la + proche:2.0000
+kppv image test:8 numero de la classe la + proche:0.0000
+kppv image test:9 numero de la classe la + proche:3.0000
+kppv image test:10 numero de la classe la + proche:3.0000
+kppv image test:11 numero de la classe la + proche:1.0000
+================================================
+================================================
+ exp�rienceD:\M2\VISA\VISA\TP-LBP-etu\\Resultats-etu\CLBP=CLBP-C_comparaison=intersection_nbVoisins=8_distance=2.txt
+ classification par le total Rang de tous les prototypes
+================================================
+tous-ppv Nb images bien class�es au sens du Total Rang de la classe [0.000]=3.00000
+tous-ppv Nb images bien class�es au sens du Total Rang de la classe [1.000]=2.00000
+tous-ppv Nb images bien class�es au sens du Total Rang de la classe [2.000]=0.00000
+tous-ppv Nb images bien class�es au sens du Total Rang de la classe [3.000]=3.00000
+================================================
+tous-ppv image test:0 numero de la classe la + proche:0.0000
+tous-ppv image test:1 numero de la classe la + proche:0.0000
+tous-ppv image test:2 numero de la classe la + proche:0.0000
+tous-ppv image test:3 numero de la classe la + proche:1.0000
+tous-ppv image test:4 numero de la classe la + proche:3.0000
+tous-ppv image test:5 numero de la classe la + proche:1.0000
+tous-ppv image test:6 numero de la classe la + proche:0.0000
+tous-ppv image test:7 numero de la classe la + proche:0.0000
+tous-ppv image test:8 numero de la classe la + proche:0.0000
+tous-ppv image test:9 numero de la classe la + proche:3.0000
+tous-ppv image test:10 numero de la classe la + proche:3.0000
+tous-ppv image test:11 numero de la classe la + proche:3.0000
+================================================

@@ -1,0 +1,420 @@
+import ij.*;	// pour classes ImagePlus et IJ
+import ij.plugin.filter.*;	// pour interface PlugInFilter et Convolver
+import ij.process.*;	// pour classe ImageProcessor
+import ij.gui.*;	// pour classe GenericDialog
+
+
+// Nom de la classe = nom du fichier ; implémente l'interface PlugInFilter
+public class TESTPlugin_ implements PlugInFilter {
+
+	ImagePlus imp;	// Fenêtre contenant l'image de référence
+	int width;		// Largeur de la fenêtre
+	int height;		// Hauteur de la fenêtre
+	
+	public int setup(String arg, ImagePlus imp) {
+		IJ.register(TESTPlugin_.class);
+		if (IJ.versionLessThan("1.32c"))
+			return DONE;
+		//imp.unlock(); //Autoriser (ou pas) les autres threads à modifier l'image source ?
+		this.imp = imp;
+		return DOES_8G;
+	}
+
+	public void run(ImageProcessor ip) {
+		
+		// Lecture des dimensions de la fenêtre
+		width = imp.getWidth();
+		height = imp.getHeight();
+
+		// Dispositions possibles pour le CFA
+		String[] orders = {"R-G-R", "B-G-B", "G-R-G", "G-B-G"};
+		
+		// Définition de l'interface
+		GenericDialog dia = new GenericDialog("Génération de l'image CFA...", IJ.getInstance());
+		dia.addChoice("Début de première ligne :", orders, orders[2]);
+		dia.showDialog();
+		
+		// Lecture de la réponse de l'utilisateur
+		if (dia.wasCanceled()) return;		
+		int order = dia.getNextChoiceIndex();		
+
+		String titre = imp.getTitle(); // Titre de l'image
+		String extension="";
+		int index = titre.lastIndexOf('.');
+		if (index>0)
+			extension = titre.substring(index);	// Extension de l'image
+		else
+			index = titre.length();
+		titre = titre.substring(0,index);
+		
+		// Calcul des composantes de l'image estimée dans une pile d'images 8 bits
+		ImageStack est_stack = imp.createEmptyStack();
+		// Déclaration d'un noyau et d'un objet Convolver pour la convolution
+		float[] kernel = {1,2,1 , 2,4,2 , 1,2,1};
+		for (int i=0;i<kernel.length;i++)
+			kernel[i]=kernel[i]/4;
+		ImageProcessor red = cfa_samples(ip,0,order);
+		Convolver conv = new Convolver();
+		conv.setNormalize(false);	// SANS normalisation (par défaut, la méthode convolve() normalise)
+		// Composante R estimée par interpolation bilinéaire grâce à la convolution
+		conv.convolve(red,kernel,3,3);
+		est_stack.addSlice(titre+" (red)"+extension, red);
+		// Composante G estimée par H&A
+		est_stack.addSlice(titre+" (green)"+extension, est_G_hamilton(ip,order));
+		// Composante B estimée par interpolation bilinéaire grâce au même noyau de convolution que R		
+		ImageProcessor blue = cfa_samples(ip,2,order);
+		conv.convolve(blue,kernel,3,3);
+		est_stack.addSlice(titre+" (blue)"+extension, blue);
+
+		// Affichage de l'image estimée sous forme de pile d'images 8 bits
+		ImagePlus est_imp888 = imp.createImagePlus();
+		est_imp888.setStack(titre+" estimated_HA", est_stack);
+		est_imp888.show();
+
+		// Affichage de l'image estimée sous forme d'une image RGB
+		IJ.doCommand("Stack to RGB");
+	}
+
+	/* row_order==0		row_order==1	row_order==2	row_order==3
+	R G R		 	 B G B			 G R G			 G B G
+	G B G			 G R G			 B G B			 R G R
+
+	*/	
+	// Estimation du plan vert par la méthode de Hamilton et Adams
+	// CFA considéré : G-R-G
+	ImageProcessor est_G_hamilton(ImageProcessor cfa_ip8, int row_order) {	
+		width = imp.getWidth();
+		height = imp.getHeight();
+		int[] offset_x = new int[2];
+		int delta_x=0, delta_y=0, est_G;
+		ImageProcessor est_ip8 = cfa_ip8.duplicate();	// Recopie des échantillons G
+		
+		// Estimation de G aux échantillons R et B
+		offset_x[0] = (row_order/2+row_order%2)%2;	// décalage en x pour R
+		offset_x[1] = (1+row_order/2+row_order%2)%2;	// décalage en x pour B
+		for (int y=2; y<height-2; y+=2) {
+			for (int x=2+offset_x[row_order%2]; x<width-2; x+=2) {
+				// Accès aux pixels du voisinage
+				int pixel_c  = cfa_ip8.getPixel(x,y)&0xff,
+					pixel_g  = cfa_ip8.getPixel(x-1,y)&0xff,
+					pixel_gg = cfa_ip8.getPixel(x-2,y)&0xff,
+					pixel_d  = cfa_ip8.getPixel(x+1,y)&0xff,
+					pixel_dd = cfa_ip8.getPixel(x+2,y)&0xff,
+					pixel_h  = cfa_ip8.getPixel(x,y-1)&0xff,
+					pixel_hh = cfa_ip8.getPixel(x,y-2)&0xff,
+					pixel_b  = cfa_ip8.getPixel(x,y+1)&0xff,
+					pixel_bb = cfa_ip8.getPixel(x,y+2)&0xff;
+				
+				// Calcul des gradients en x et y
+				delta_x = Math.abs(pixel_g-pixel_d)+Math.abs(2*pixel_c-pixel_gg-pixel_dd);
+				delta_y = Math.abs(pixel_h-pixel_b)+Math.abs(2*pixel_c-pixel_hh-pixel_bb);
+
+				// Estimation de la composante G (la formule est la même en R et en B)
+				if (delta_x < delta_y)
+					est_G = (int)((pixel_g+pixel_d)/2.0 + (2*pixel_c-pixel_gg-pixel_dd)/4.0);
+				else {
+					if (delta_x > delta_y)
+						est_G = (int)((pixel_h+pixel_b)/2.0 + (2*pixel_c-pixel_hh-pixel_bb)/4.0);
+					else
+						est_G = (int)((pixel_g+pixel_d+pixel_h+pixel_b)/4.0 
+								+ (4*pixel_c-pixel_gg-pixel_dd-pixel_hh-pixel_bb)/8.0);
+				}
+				est_ip8.putPixel(x,y,est_G);
+			}
+		}
+
+		return est_ip8;
+	}
+	
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!! Fonction extraite de sample_cfa.java, ne pas modifier !!!!!!!!!!!!!!!!!!!
+	/* row_order==0		row_order==1	row_order==2	row_order==3
+	R G R		 	 B G B			 G R G			 G B G
+	G B G			 G R G			 B G B			 R G R
+	*/
+	// Retourne, dans une image de même type que ip, les échantillons de la composante channel 
+	// (R=0,G=1,B=2) de l'image CFA
+	ImageProcessor cfa_samples(ImageProcessor cfa_ip, int channel, int row_order) {
+		
+		width = imp.getWidth();
+		height = imp.getHeight();
+		int offset_x;
+		ImageProcessor samples_ip = null;
+		
+		switch (imp.getType()) {
+
+			case ImagePlus.GRAY8 :	// Image CFA en 8 bits
+				
+				samples_ip = new ByteProcessor(width,height);
+	
+				switch (channel) {
+				
+					case 0:	// Red
+						offset_x = (row_order/2+row_order%2)%2;
+						for (int y=row_order%2; y<height; y+=2) {
+							for (int x=offset_x; x<width; x+=2)
+								samples_ip.putPixel(x,y,cfa_ip.getPixel(x,y));
+						}
+						break;
+			
+					case 1:	// Green
+						offset_x = (row_order<2)?1:0;
+						for (int y=0; y<height; y+=1) {
+							for (int x=(y+offset_x)%2; x<width; x+=2) 
+								samples_ip.putPixel(x,y,cfa_ip.getPixel(x,y));
+						}
+						break;
+			
+					case 2:	// Blue
+						offset_x = (1+row_order/2+row_order%2)%2;
+						for (int y=1-row_order%2; y<height; y+=2) {
+							for (int x=offset_x; x<width; x+=2) 
+								samples_ip.putPixel(x,y,cfa_ip.getPixel(x,y));
+						}
+						break;
+				}				
+				
+			break;		
+		
+			case ImagePlus.COLOR_RGB :	// Image CFA en RGB
+				
+				int pixel_value = 0;
+				samples_ip = new ColorProcessor(width,height);
+				
+				switch (channel) {
+				
+					case 0:	// Red
+						offset_x = (row_order/2+row_order%2)%2;
+						for (int y=row_order%2; y<height; y+=2) {
+							for (int x=offset_x; x<width; x+=2) {
+								pixel_value = cfa_ip.getPixel(x,y);
+								int red = (int)(pixel_value & 0xff);
+								samples_ip.putPixel(x,y,((red & 0xff)<<16));
+							}
+						}
+						break;
+			
+					case 1:	// Green
+						offset_x = (row_order<2)?1:0;
+						for (int y=0; y<height; y+=1) {
+							for (int x=(y+offset_x)%2; x<width; x+=2) {
+								pixel_value = cfa_ip.getPixel(x,y);
+								int green = (int)(pixel_value & 0xff);
+								samples_ip.putPixel(x,y,((green & 0xff)<<8));
+							}
+						}
+						break;
+			
+					case 2:	// Blue
+						offset_x = (1+row_order/2+row_order%2)%2;
+						for (int y=1-row_order%2; y<height; y+=2) {
+							for (int x=offset_x; x<width; x+=2) {
+								pixel_value = cfa_ip.getPixel(x,y);
+								int blue = (int)(pixel_value & 0xff);
+								samples_ip.putPixel(x,y,(blue & 0xff));
+							}
+						}
+						break;
+				}
+					
+				break;				
+				
+			case ImagePlus.GRAY32 : 	// Image CFA en 32 bits (float)
+				
+				// Pour les FloatProcessor, utiliser float getPixelValue(int,int) et putPixelValue(int,int,double),
+				// PAS getPixel(int,int), qui nécessite de convertir son résultat en float avec Float.intBitsToFloat()
+				samples_ip = new FloatProcessor(width,height);
+	
+				switch (channel) {
+				
+					case 0:	// Red
+						offset_x = (row_order/2+row_order%2)%2;
+						for (int y=row_order%2; y<height; y+=2) {
+							for (int x=offset_x; x<width; x+=2)
+								samples_ip.putPixelValue(x,y,cfa_ip.getPixelValue(x,y));
+						}
+						break;
+			
+					case 1:	// Green
+						offset_x = (row_order<2)?1:0;
+						for (int y=0; y<height; y+=1) {
+							for (int x=(y+offset_x)%2; x<width; x+=2) 
+								samples_ip.putPixelValue(x,y,cfa_ip.getPixelValue(x,y));
+						}
+						break;
+			
+					case 2:	// Blue
+						offset_x = (1+row_order/2+row_order%2)%2;
+						for (int y=1-row_order%2; y<height; y+=2) {
+							for (int x=offset_x; x<width; x+=2) 
+								samples_ip.putPixelValue(x,y,cfa_ip.getPixelValue(x,y));
+						}
+						break;
+				}				
+				
+				break;
+		}
+		
+		return samples_ip;		
+		
+	}
+	
+	/* row_order==0		row_order==1	row_order==2	row_order==3
+		R G R		 	 B G B			 G R G			 G B G
+		G B G			 G R G			 B G B			 R G R
+ 
+	 */
+	/*
+	ImageProcessor demat_lian(int row_order) {	//Dématriçage par la méthode de Lian et al.
+		
+		width = imp.getWidth();
+		height = imp.getHeight();
+		int offset_x;
+		int pixel_value = 0;
+		ImageProcessor est_ipRGB = new ColorProcessor(width,height);
+		ImageProcessor cfa_ip8 = imp.getProcessor();
+
+		// 1. Calcul de la luminance par convolution
+		float[] kernel={0,1,-2,1,0,1, -4,6,-4,1, -2,6,56,6,-2, 1,-4,6,-4,1, 0,1,-2,1,0};
+		ImageProcessor lum_ip32 = cfa_ip8.convertToFloat();
+		lum_ip32.convolve(kernel, 5, 5);
+		
+		// 2.a. Pré-estimation de R et B aux positions G
+		offset_x = (row_order<2)?1:2;
+		for (int y=1; y<height-1; y+=1) {
+			for (int x=(y+offset_x)%2; x<width-1; x+=2) {
+				pixel_value = cfa_ip8.getPixel(x,y);
+				int green = (int)(pixel_value & 0xff);
+				cfa_ip8.putPixel(x,y,((green & 0xff)<<8));
+			}
+		}
+	
+		switch (channel) {
+		
+			case 0:	// Red
+				offset_x = (row_order/2+row_order%2)%2;
+				for (int y=row_order%2; y<height; y+=2) {
+					for (int x=offset_x; x<width; x+=2) {
+						pixel_value = ip.getPixel(x,y);
+						int red = (int)(pixel_value & 0xff);
+						cfa_ip.putPixel(x,y,((red & 0xff)<<16));
+					}
+				}
+				break;
+	
+			case 1:	// Green
+				offset_x = (row_order<2)?1:0;
+				for (int y=0; y<height; y+=1) {
+					for (int x=(y+offset_x)%2; x<width; x+=2) {
+						pixel_value = ip.getPixel(x,y);
+						int green = (int)(pixel_value & 0xff);
+						cfa_ip.putPixel(x,y,((green & 0xff)<<8));
+					}
+				}
+				break;
+	
+			case 2:	// Blue
+				offset_x = (1+row_order/2+row_order%2)%2;
+				for (int y=1-row_order%2; y<height; y+=2) {
+					for (int x=offset_x; x<width; x+=2) {
+						pixel_value = ip.getPixel(x,y);
+						int blue = (int)(pixel_value & 0xff);
+						cfa_ip.putPixel(x,y,(blue & 0xff));
+					}
+				}
+				break;
+		}
+					
+		return cfa_ip;		
+
+	}
+
+	ImageProcessor cfa_samples(ImageProcessor ip, int channel, int row_order) {	//Images (couleurs) de composante channel (R=0,G=1,B=2) de l'image ip
+		
+		width = imp.getWidth();
+		height = imp.getHeight();
+		int offset_x;
+		ImageProcessor cfa_ip = null;
+		
+		switch (imp.getType()) {
+		
+			case ImagePlus.GRAY8 :	// Image CFA
+				
+				int pixel_value = 0;
+				cfa_ip = new ColorProcessor(width,height);
+				
+				switch (channel) {
+				
+					case 0:	// Red
+						offset_x = (row_order/2+row_order%2)%2;
+						for (int y=row_order%2; y<height; y+=2) {
+							for (int x=offset_x; x<width; x+=2) {
+								pixel_value = ip.getPixel(x,y);
+								int red = (int)(pixel_value & 0xff);
+								cfa_ip.putPixel(x,y,((red & 0xff)<<16));
+							}
+						}
+						break;
+			
+					case 1:	// Green
+						offset_x = (row_order<2)?1:0;
+						for (int y=0; y<height; y+=1) {
+							for (int x=(y+offset_x)%2; x<width; x+=2) {
+								pixel_value = ip.getPixel(x,y);
+								int green = (int)(pixel_value & 0xff);
+								cfa_ip.putPixel(x,y,((green & 0xff)<<8));
+							}
+						}
+						break;
+			
+					case 2:	// Blue
+						offset_x = (1+row_order/2+row_order%2)%2;
+						for (int y=1-row_order%2; y<height; y+=2) {
+							for (int x=offset_x; x<width; x+=2) {
+								pixel_value = ip.getPixel(x,y);
+								int blue = (int)(pixel_value & 0xff);
+								cfa_ip.putPixel(x,y,(blue & 0xff));
+							}
+						}
+						break;
+				}
+					
+				break;
+			
+			case ImagePlus.GRAY32 : 	// Float 32
+				
+				cfa_ip = new FloatProcessor(width,height);
+				switch (channel) {
+				
+				case 0:	// Red
+					offset_x = (row_order/2+row_order%2)%2;
+					for (int y=row_order%2; y<height; y+=2) {
+						for (int x=offset_x; x<width; x+=2)
+							cfa_ip.putPixel(x,y,ip.getPixel(x,y));
+					}
+					break;
+		
+				case 1:	// Green
+					offset_x = (row_order<2)?1:0;
+					for (int y=0; y<height; y+=1) {
+						for (int x=(y+offset_x)%2; x<width; x+=2) 
+							cfa_ip.putPixel(x,y,ip.getPixel(x,y));
+					}
+					break;
+		
+				case 2:	// Blue
+					offset_x = (1+row_order/2+row_order%2)%2;
+					for (int y=1-row_order%2; y<height; y+=2) {
+						for (int x=offset_x; x<width; x+=2) 
+							cfa_ip.putPixel(x,y,ip.getPixel(x,y));
+					}
+					break;
+			}				
+				
+			break;
+		}
+		
+		return cfa_ip;		
+		
+	}
+*/
+}

@@ -1,0 +1,87 @@
+// Calcul de la norme et de la direction du gradient de Sobel
+
+requires("1.41i");	// cause substring(string, index)
+setBatchMode(true);
+
+filename = getInfo("image.filename");
+filenameWithoutExt = substring(filename, 0, lastIndexOf(filename, "."));
+extension = substring(filename, lastIndexOf(filename, "."));
+filenameGradX = filenameWithoutExt+"_grad_x"+extension;
+filenameGradY = filenameWithoutExt+"_grad_y"+extension;
+run("Duplicate...", "title="+filenameGradX);
+run("32-bit");	// Conversion en Float avant calcul des dérivées !!
+run("Convolve...", "text1=[-1 0 1\n-2 0 2\n-1 0 1\n] normalize");
+selectWindow(filename);
+run("Duplicate...", "title="+filenameGradY);
+run("32-bit");
+run("Convolve...", "text1=[-1 -2 -1\n0 0 0\n1 2 1\n] normalize");
+filenameNormeGrad = filenameWithoutExt+"_grad_norme"+extension;
+run("Duplicate...", "title="+filenameNormeGrad);
+filenameDirGrad = filenameWithoutExt+"_grad_dir"+extension;
+run("Duplicate...", "title="+filenameDirGrad);
+
+/********** Calcul de la norme et de la direction du gradient *********/
+// récupération de la taille de l'image
+w = getWidth();
+h = getHeight();
+// Calculs pour chaque pixel
+for (y=0; y<h; y++) {
+	for (x=0; x<w; x++) {
+
+		selectImage (filenameGradX);
+		p1 = getPixel (x, y);
+		selectImage (filenameGradY);
+		p2 = getPixel (x, y);
+		norme = sqrt(p1*p1 + p2*p2);
+		direction = atan2(p2,p1)*180/PI;
+		selectWindow(filenameNormeGrad);
+		setPixel (x,y,norme);
+		selectWindow(filenameDirGrad);
+		setPixel (x,y,direction);
+	}
+}
+
+filenameMaxLoc = filenameWithoutExt+"_max_loc"+extension;
+run("Duplicate...", "title="+filenameMaxLoc);
+
+/********** Détection des maxima locaux de la la norme du gradient dans sa direction *********/
+for (y=0; y<h; y++) {
+	for (x=0; x<w; x++) {
+		// Lecture de la norme et de la direction du gradient en ce pixel
+		selectImage (filenameDirGrad);
+		theta = getPixel (x, y);	// Direction du gradient [-180..180]
+		selectImage (filenameNormeGrad);
+		p = getPixel (x, y);
+
+		// Détermination des pixels voisins à prendre en compte
+		// ATTENTION ! : pas de priorité de && par rapport à ||
+		if ((theta>=22.5 && theta<=67.5) || (theta>=-157.5 && theta<=-112.5))
+		{ 	// Voisins selon la première diagonale
+			p1 = getPixel(x+1, y+1);
+			p2 = getPixel(x-1, y-1);
+		} else {
+			if ((theta>=67.5 && theta<=112.5) || (theta>=-112.5 && theta<=-67.5))
+			{	// Voisins selon la direction Y
+				p1 = getPixel(x, y+1);
+				p2 = getPixel(x, y-1);
+			} else {
+				if ((theta>=112.5 &&theta<=157.5) || (theta>=-67.5 && theta<=-22.5))
+				{	// Voisins selon la seconde diagonale
+					p1 = getPixel(x+1, y-1);
+					p2 = getPixel(x-1, y+1);
+				} else {
+					// Voisins selon la direction X
+					p1 = getPixel(x+1, y);
+					p2 = getPixel(x-1, y);
+				}
+			}
+		}
+		// Tester si le pixel courant est un maximum local
+		selectWindow(filenameMaxLoc);
+		if (p>= p1 && p > p2)
+			setPixel(x,y,p);
+		else
+			setPixel(x,y,0);
+	}
+}
+setBatchMode("exit and display");

@@ -1,0 +1,337 @@
+// Calcul des CLBPs  � partir d'une image Byte
+
+// Param�tres 
+// - distances et nombre de pixels voisins
+// - seuils pour le module (CLBP_M) et la valeur centrale (CLBP_C) 
+// R�sultats cod�s sur 3 images de type 8 bits
+//
+
+// auteur : Ludo le 13 fevrier 2012
+
+import ij.*; // pour classes ImagePlus et IJ
+import ij.plugin.filter.*; // pour interface PlugInFilter et Convolver
+import ij.process.*; // pour classe ImageProcessor
+import ij.gui.*; // pour classe GenericDialog
+
+import java.awt.*; // pour classes Rectangle et List
+import java.awt.event.*; // pour classe ActionListener
+//import java.util.Vector;
+
+// Nom de la classe = nom du fichier ; impl�mente l'interface PlugInFilter
+public class byte_2_lbp_etu_ implements PlugInFilter {
+
+	ImagePlus imp; // Fen�tre contenant l'image source
+	int width; // Largeur de l'image
+	int height; // Hauteur de l'image
+	String titre; // titre de l'image
+
+	private int LBP_M_ID = 0; // ID de l'image (masque) de la image de LBP_S
+	private int LBP_S_ID = 0; // ID de l'image (masque) de la image de LBP_M
+	private int LBP_C_ID = 0; // ID de l'image (masque) de la image de LBP_C
+
+	private String option_type = "CLBP"; // option de type de LBP
+	private int option_distance = 1; // option de distance
+	private int option_nbVoisins = 8; // option du voisinage
+	private double option_seuilM = -1; // seuil pour CLBP_M
+	private double option_seuilC = -1; // seuil pour CLBP_C
+	private boolean option_rotation = false; // invariance � la rotation
+
+	public int setup(String arg, ImagePlus imp) {
+		IJ.register(byte_2_lbp_etu_.class);
+		if (IJ.versionLessThan("1.32c"))
+			return DONE;
+		// imp.unlock(); //Autoriser (ou pas) les autres threads � modifier l'image
+		// source ?
+		this.imp = imp;
+		titre = imp.getTitle(); // Titre de l'image
+
+		return DOES_8G + NO_CHANGES;
+	}
+
+	public void run(ImageProcessor ip) {
+
+		ImageProcessor LBP_M = null;
+		ImageProcessor LBP_S = null;
+		ImageProcessor LBP_C = null;
+
+		ImagePlus LBP_MImp = null;
+		ImagePlus LBP_SImp = null;
+		ImagePlus LBP_CImp = null;
+
+		width = ip.getWidth();
+		height = ip.getHeight();
+
+		// Dialogue de saisie des param�tres d'entr�e de la fonction
+
+		if (!showDialog())
+			return;
+
+		if (LBP_M_ID == 0) {
+			// Cr�ation du buffer Image
+			LBP_M = new ByteProcessor(width, height);
+			LBP_MImp = new ImagePlus(titre + " (LBP_M)", LBP_M);
+		} else {
+			// R�cup�ration du buffer image existante
+			LBP_M = WindowManager.getImage(LBP_M_ID).getProcessor();
+			LBP_MImp = WindowManager.getImage(LBP_M_ID);
+		}
+
+		if (LBP_S_ID == 0) {
+			LBP_S = new ByteProcessor(width, height);
+			LBP_SImp = new ImagePlus(titre + " (LBP_S)", LBP_S);
+		} else {
+			LBP_S = WindowManager.getImage(LBP_S_ID).getProcessor();
+			LBP_SImp = WindowManager.getImage(LBP_S_ID);
+		}
+
+		if (LBP_C_ID == 0) {
+			LBP_C = new ByteProcessor(width, height);
+			LBP_CImp = new ImagePlus(titre + " (LBP_C)", LBP_C);
+		} else {
+			LBP_C = WindowManager.getImage(LBP_C_ID).getProcessor();
+			LBP_CImp = WindowManager.getImage(LBP_C_ID);
+		}
+
+		// D�termination des valeurs par d�faut
+		// option_seuilM a calculer
+		// option_seuilC a calculer
+
+		byte_2_lbp(ip, LBP_S, LBP_M, LBP_C);
+
+		LBP_SImp.repaintWindow();
+		LBP_MImp.repaintWindow();
+		LBP_CImp.repaintWindow();
+	}
+
+	public boolean showDialog() {
+
+		// Trouver les images ouvertes pouvant servir d'images LBPs
+		List imageList = new List();
+		int[] imageIDs = WindowManager.getIDList();
+		int[] itemIDs = new int[imageIDs.length + 1]; // Correspondance n�choix <-> ID image
+		imageList.add("None");
+		itemIDs[0] = 0; // choix d'aucune image
+		int nbItems = 1; // Nombre de choix
+		if (imageIDs != null) {
+			for (int n = 0; n < imageIDs.length; ++n) {
+				ImagePlus img = WindowManager.getImage(imageIDs[n]);
+				// Seules les images en niveaux de gris sur 8 bits de m�me taille l'image source
+				// sont ok
+				if (img.getType() == ImagePlus.GRAY8 && img != imp && img.getWidth() == imp.getWidth()
+						&& imp.getHeight() == img.getHeight()) {
+					imageList.add(WindowManager.getImage(imageIDs[n]).getTitle());
+					itemIDs[nbItems++] = imageIDs[n];
+				}
+			}
+		}
+
+		// Description et affichage de la fen�tre de config
+		GenericDialog gd = new GenericDialog("CLBP extraits d'une image de type BYTE");
+
+		String[] typeItems = { "CLBP", "CLBP_S", "CLBP_M", "CLBP_C" };
+		gd.addChoice("type:", typeItems, "CLBP");
+		String[] nbVoisinsItems = { "8", "16", "24" };
+		gd.addChoice("nbVoisins:", nbVoisinsItems, "8");
+		String[] distanceItems = { "1", "2", "3", "4", "5", "6", "7" };
+		gd.addChoice("R:", distanceItems, "1");
+		gd.addMessage("Seuils (-1 pour valeurs par d�faut):");
+		gd.addNumericField("seuilM:", -1, 2);
+		gd.addNumericField("seuilC:", -1, 2);
+		gd.addCheckbox("riu2:", option_rotation);
+		gd.addChoice("LBP_S:", imageList.getItems(), "None");
+		gd.addChoice("LBP_M:", imageList.getItems(), "None");
+		gd.addChoice("LBP_C:", imageList.getItems(), "None");
+		gd.showDialog();
+
+		// Lecture des valeurs saisies
+		option_type = gd.getNextChoice();
+		option_nbVoisins = Integer.valueOf(gd.getNextChoice()); // nombre de pixels voisins
+		option_distance = Integer.valueOf(gd.getNextChoice()); // distance entre pixel central et pixel voisin
+		option_seuilM = gd.getNextNumber(); // seuil pour calcul de CLBP_M
+		option_seuilC = gd.getNextNumber(); // seuil pour calcul de CLBP_C
+		option_rotation = gd.getNextBoolean(); // invariance � la rotation ?
+		LBP_S_ID = itemIDs[gd.getNextChoiceIndex()]; // image recevant les CLBP_S
+		LBP_M_ID = itemIDs[gd.getNextChoiceIndex()]; // image recevant les CLBP_M
+		LBP_C_ID = itemIDs[gd.getNextChoiceIndex()]; // image recevant les CLBP_C
+
+		if (gd.wasCanceled())
+			return false;
+
+		IJ.register(this.getClass()); // protect class variables (parameters) from garbage collection
+		return true;
+	}
+
+	/**
+	 * Implements the actionPerformed for the ActionListener.
+	 */
+	public synchronized void actionPerformed(ActionEvent e) {
+		/*
+		 * if (e.getSource() == chkArea) { txtArea.setEnabled(chkArea.isSelected()); }
+		 */
+		notify();
+	}
+
+	/**
+	 * Calcul des LBP d'une image au format byte
+	 * 
+	 * 
+	 */
+	public void byte_2_lbp(ImageProcessor ip, ImageProcessor LBP_S, ImageProcessor LBP_M, ImageProcessor LBP_C) {
+		// RAZ des images LBP
+		LBP_S.and(0);
+		LBP_M.and(0);
+		LBP_C.and(0);
+
+		// Structure du voisinage
+		// 3 x 2 x 1
+		// x x x x x
+		// 4 x P x 0
+		// x x x x x
+		// 5 x 6 x 7
+
+		for (int y = option_distance; y < height - option_distance; y += 1) {
+			for (int x = option_distance; x < width - option_distance; x += 1) {
+
+				// Partie à modifier
+
+				int pixel_centre = ip.getPixel(x, y); // valeur du pixel central
+
+				// Récupération du voisinage du pixel :
+				int[] neighborhood = this.getNeighbors(ip, x, y);
+
+				int LBP_S_centre = 0;
+				int LBP_M_centre = 0;
+				int LBP_C_centre = 0;
+
+				LBP_C.putPixel(x, y, LBP_C_centre);
+
+				LBP_M.putPixel(x, y, LBP_M_centre);
+				LBP_S.putPixel(x, y, LBP_S_centre);
+
+			} // for x
+		} // for y
+
+	} // byte_2_lbp()
+
+	/**
+	 * Calcule l'équation (1) de l'article : l'opérateur "S" de LBP puis renvoie son
+	 * résultat
+	 * 
+	 * @param I_x la valeur de pixel centrale
+	 * @param neighborhood
+	 * @return
+	 */
+	private int LBP_S(int I_x, int[] neighborhood) {
+		int LBP_S = 0;
+		
+		// POUR CHAQUE [voisin I_q]
+		for(int i = 0; i < neighborhood.length; i++) {
+			int I_q = neighborhood[i];
+			
+			// Faire la somme de l'équation
+			LPB_S += this.s_fraktur(I_q, I_x) * Math.pow(i, 2);
+		}
+		
+		return LBP_S;
+	}
+
+	/**
+	 * Calcule l'équation (1) de l'article : l'opérateur "C" de LBP puis renvoie son
+	 * résultat
+	 * 
+	 * @param pixel_centre
+	 * @param neighborhood
+	 * @return
+	 */
+	private int LBP_C(int pixel_centre, int[] neighborhood) {
+		return -1;
+	}
+
+	/**
+	 * Calcule l'équation (4) de l'article : l'opérateur "s_fraktur" puis renvoie
+	 * son résultat
+	 * 
+	 * @param a
+	 * @param b
+	 * @return
+	 */
+	private int s_fraktur(int a, int b) {
+		return a >= b ? 1 : 0;
+	}
+
+	/**
+	 * Get the mean value of mp=|gp-gc| of a given image, taking the neighborhood
+	 * defined by ({@link #option_distance}, {@link #option_nbVoisins}) into
+	 * account.
+	 * 
+	 * @param ip processed image
+	 * @return mean value
+	 */
+
+	private double getMeanMp(ImageProcessor ip) {
+
+		int nbPixels = 0;
+		double result = 0;
+
+		for (int y = option_distance; y < height - option_distance; y += 1) {
+			for (int x = option_distance; x < width - option_distance; x += 1) {
+				int pixel_centre = ip.getPixel(x, y); // central pixel value
+
+				// update mp sum
+				int[] voisins = getNeighbors(ip, x, y);
+				for (int pixel_voisin : voisins)
+					result += Math.abs(pixel_voisin - pixel_centre);
+
+				// update pixel count
+				nbPixels += voisins.length;
+			} // for x
+		} // for y
+
+		result = result / nbPixels;
+		return result;
+	} // getMeanMp()
+
+	/**
+	 * Get the values of neighboring pixels defined by option_nb_voisins and
+	 * option_distance. These values are bilinearly interpolated if neighboring
+	 * pixel coordinates are non-integer, except when option_distance=1 and
+	 * option_nb_voisins=8.
+	 * 
+	 * @param ip processed image
+	 * @param x  x-coordinate of central pixel
+	 * @param y  y-coordinate of central pixel
+	 * @return array of neighboring pixel values
+	 */
+
+	private int[] getNeighbors(ImageProcessor ip, int x, int y) {
+		int[] neighbors = new int[option_nbVoisins];
+		if (option_distance == 1 && option_nbVoisins == 8) // do not interpolate
+		{
+			neighbors[0] = ip.getPixel(x + 1, y);
+			neighbors[1] = ip.getPixel(x + 1, y - 1);
+			neighbors[2] = ip.getPixel(x, y - 1);
+			neighbors[3] = ip.getPixel(x - 1, y - 1);
+			neighbors[4] = ip.getPixel(x - 1, y);
+			neighbors[5] = ip.getPixel(x - 1, y + 1);
+			neighbors[6] = ip.getPixel(x, y + 1);
+			neighbors[7] = ip.getPixel(x + 1, y + 1);
+		} else {
+			for (int i = 0; i < option_nbVoisins; i++) {
+				double angle = 2 * Math.PI * i / option_nbVoisins;
+				double x_voisin = x + option_distance * Math.cos(angle);
+				double y_voisin = y - option_distance * Math.sin(angle);
+
+				if (angle % (Math.PI / 2) == 0)
+					// main directions: do not interpolate
+					neighbors[i] = ip.getPixel((int) Math.round(x_voisin), (int) Math.round(y_voisin));
+				else
+					// bilinear interpolation
+					neighbors[i] = (int) ip.getInterpolatedValue(x_voisin, y_voisin);
+			}
+
+		}
+		return neighbors;
+
+	} // getNeighbors()
+
+}// fin de la classe

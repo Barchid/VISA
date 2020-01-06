@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="SetTargetsDialogSettings">
+		<item value="345" key="DIALOG_WIDTH"/>
+		<item value="1|Tahoma|8.25|0|WINDOWS|1|-11|0|0|0|400|0|0|0|1|0|0|0|0|Tahoma" key="DIALOG_FONT_NAME"/>
+		<item value="332" key="DIALOG_HEIGHT"/>
+		<item value="99" key="DIALOG_Y_ORIGIN"/>
+		<item value="228" key="DIALOG_X_ORIGIN"/>
+	</section>
+</section>

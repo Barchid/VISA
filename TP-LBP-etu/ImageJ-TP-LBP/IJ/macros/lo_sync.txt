@@ -1,0 +1,23 @@
+//sync = isOpen("Sync Windows 1.7");
+//if (sync == false)
+//	run("Sync Windows");
+
+// Find all windows with same size as active
+syncImages=newArray(1);
+syncImages[0]=getImageID();
+w = getWidth();
+h = getHeight();
+w = getWidth();
+getSelectionCoordinates(xCoordinates, yCoordinates);
+run("To Selection");
+nbSyncImages = 0;
+//setBatchMode(true);	// Do not display active window
+for (i=1; i<=nImages; i++) {
+	selectImage(i);
+	if (w==getWidth() && h==getHeight()) {
+		setSelectionLocation(xCoordinates, yCoordinates);
+		runf("To Selection");
+		syncImages[nbSyncImages++]=getImageID();
+	}
+}
+selectImage(syncImages[0]);

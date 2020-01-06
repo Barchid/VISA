@@ -1,0 +1,630 @@
+Average Stack
+(i(1) + i(2)) / 2.0
+y
+x + y
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+1
+1
+0
+Gray
+Averager 3x3
+(r(x-1,y-1)+2*r(x,y-1)+r(x+1,y-1)+2*r(x-1,y)+4*r+2*r(x+1,y)+r(x-1,y+1)+2*r(x,y+1)+r(x+1,y+1))/16.0
+(g(x-1,y-1)+2*g(x,y-1)+g(x+1,y-1)+2*g(x-1,y)+4*g+2*g(x+1,y)+g(x-1,y+1)+2*g(x,y+1)+g(x+1,y+1))/16.0
+(b(x-1,y-1)+2*b(x,y-1)+b(x+1,y-1)+2*b(x-1,y)+4*b+2*b(x+1,y)+b(x-1,y+1)+2*b(x,y+1)+b(x+1,y+1))/16.0
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+1
+0
+0
+RGB
+Color Spiral
+sin(d() + a())
+sin(d() + a() + 4.188)
+sin(d() + a() + 2.094)
+-1
+1
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Dark Shrinking
+r((x*pow(t+0.0d,0.4/(r+b+g+1)))%w,(y*pow(t+0.0d,0.3/(r+b+g+1)))%h)
+g((x*pow(t+0.0d,0.4/(r+b+g+1)))%w,(y*pow(t+0.0d,0.3/(r+b+g+1)))%h)
+b((x*pow(t+0.0d,0.4/(r+b+g+1)))%w,(y*pow(t+0.0d,0.3/(r+b+g+1)))%h)
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+De-saturate
+0.9 * r + 0.1 * g
+0.9 * g + 0.1 * b
+0.9 * b + 0.1 * r
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Default
+xi * maxval / w
+yi * maxval / w
+(xi + yi) * maxval / w / 2
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Embedded Circle
+d() < wr/4 ? (xi-w/4) * 2 *255 / w : a() * 40
+
+
+0
+maxval
+0
+0
+0
+16
+16
+0
+200
+0
+0
+0
+0
+Gray
+Fibonacci
+sin(ln(d())*8 + a()) * sin(a()*8)
+sin(ln(d())*8 + a() - pi/2) * sin(a()*8)
+sin(ln(d())*8 + a() + pi/2) * sin(a()*8)
+-1
+1
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+HLS Blue
+0
+x
+y
+0
+maxval
+0
+0
+0
+1
+1
+0
+200
+0
+0
+0
+0
+HLS
+HLS Green
+240
+x
+y
+0
+maxval
+0
+0
+0
+1
+1
+0
+200
+0
+0
+0
+0
+HLS
+HLS Red
+120
+x
+y
+0
+maxval
+0
+0
+0
+1
+1
+0
+200
+0
+0
+0
+0
+HLS
+HSV Blue
+240
+x
+y
+0
+maxval
+0
+0
+0
+1
+1
+0
+200
+0
+0
+0
+0
+HSV
+HSV Green
+120
+x
+y
+0
+maxval
+0
+0
+0
+1
+1
+0
+200
+0
+0
+0
+0
+HSV
+HSV Red
+0
+x
+y
+0
+maxval
+0
+0
+0
+1
+1
+0
+200
+0
+0
+0
+0
+HSV
+Invert Image
+maxval - i
+maxval - g
+maxval - b
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Left & Unsharpen
+r((x+pow(2.1,t+0.0d))%w,y)
+g((x+pow(3.2,t+0.0d))%w,y)
+b((x+pow(4.3,t+0.0d))%w,y)
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Log Blossom
+ln(d())*4 + a()
+ln(d())*4 - a() - pi/2
+ln(d())*4 + a() + pi/2
+0
+pi
+1
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Mandel LUT
+mand()
+
+
+0
+maxval
+1
+-0.75
+0
+3
+3
+1
+200
+1
+0
+0
+0
+RGB
+Mandel Zebra
+mand() % 2
+
+
+0
+1
+0
+-0.75
+0
+3
+3
+1
+200
+0
+0
+0
+0
+RGB
+Mandel3 LUT
+mand(3)
+
+
+0
+maxval
+1
+0
+0
+3
+3
+1
+200
+1
+0
+0
+0
+RGB
+Mandel4 LUT
+mand(4)
+
+
+0
+maxval
+1
+0.0
+0
+3
+3
+1
+200
+1
+0
+0
+0
+RGB
+Mandelbrot
+mand() + 170
+
+
+0
+18
+1
+-0.75
+0
+3
+3
+1
+200
+0
+0
+0
+0
+RGB
+Moire
+x * x + y * y
+
+
+0
+maxval
+1
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Moire (Stack)
+pow(1.5 * x * t / n, 2) + pow(1.5 * y * t / n, 2)
+
+
+0
+maxval
+1
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Pinwheel
+((a() * 40.74 + d()) % 16)
+
+
+0
+15
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Polar Moire
+floor((a() * 40.75 + 1) % 2)
+
+
+0
+1
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Polar Dartboard
+((int) (a() * 40.743)) | ((int) d())
+
+
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+Gray
+Shrinking
+r(x*pow(t+0.0d,sin(pi*t/n))%w,y)
+g(x*pow(t+0.0d,sin(pi*t/n))%w,y)
+b(x*pow(t+0.0d,sin(pi*t/n))%w,y)
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Sine Curve
+abs(y-sin(x))<0.012 ? 0 : 1
+
+
+0
+1
+0
+0
+0
+2*pi
+2*pi
+1
+200
+0
+0
+0
+0
+Gray
+Sine Argyle
+cos(0.2*x) + sin(0.2*y)
+cos(0.4*x) + sin(0.4*y)
+cos(0.1*x) + sin(0.1*y)
+-1
+1
+0
+0
+0
+100
+100
+0
+200
+0
+0
+0
+0
+RGB
+Sine Blobs
+sin(x) * sin(y)
+
+
+-1
+1
+0
+0
+0
+2 * pi
+2 * pi
+1
+200
+0
+0
+0
+0
+RGB
+Sunburst
+a() * pow(2.0, floor(d() + a()/(2 * pi)))
+d() / 4
+d() / 2
+0
+2 * pi
+1
+0
+0
+16
+16
+0
+200
+0
+0
+0
+0
+RGB
+Up & Left
+r((x+pow(t+0.0d,g/b))%w,(y+pow(t+0.0d,b/g))%h)
+g((x+pow(t+0.0d,b/r))%w,(y+pow(t+0.0d,r/b))%h)
+b((x+pow(t+0.0d,r/g))%w,(y+pow(t+0.0d,g/r))%h)
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Upwards
+r(x,(y+pow(t+0.0d,2.91))%h)
+g(x,(y+pow(t+0.0d,2.91))%h)
+b(x,(y+pow(t+0.0d,2.91))%h)
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+0
+RGB
+Zero out color values
+(r != g) || (g != b) ? 0 : i
+(r != g) || (g != b) ? 0 : i
+(r != g) || (g != b) ? 0 : i
+0
+maxval
+0
+0
+0
+w
+h
+0
+200
+0
+0
+0
+1
+RGB

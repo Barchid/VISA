@@ -1,0 +1,20 @@
+  macro "Olivier" {
+	//open("lighthouse_cfa.png");
+	w = getWidth();
+	h = getHeight();
+	newImage("Dématriçage bilineaire", "8-bit", w, h, 1);
+	selectWindow("lighthouse_cfa.png");
+	setBatchMode(true);
+	for (y=0; y<h; y++) {
+		for (x=0; x<w; x++) {
+			ndg = getPixel(x, y);
+			selectWindow("Dématriçage bilineaire");
+			putPixel(x, y, 255-ndg);
+			selectWindow("lighthouse_cfa.png");
+		}
+		if (y%10==0) showProgress(y, h-1);
+	}
+	setBatchMode(false);
+	selectWindow("Dématriçage bilineaire");
+	updateDisplay();
+  }

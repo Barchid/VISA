@@ -1,0 +1,38 @@
+macro "Display XY Coordinates as Overlay" {	// Encore à mettre au point !!
+	requires("1.43h"); // for makeText(string, x, y)
+	font_height = 1;
+	setColor(0, 0, 0);	
+	setFont("Arial", font_height, "antialiased");
+	setJustification("left");
+
+//	roiManager("reset");
+	getSelectionBounds(x_ul, y_ul, width, height);
+	values="";
+	if (bitDepth()==24) {
+		for (y=y_ul; y<y_ul+height; y++) {
+			for (x=x_ul; x<x_ul+height; x++) {
+				v = getPixel(x,y);
+				red = (v>>16)&0xff;  // extract red byte (bits 23-17)
+				green = (v>>8)&0xff; // extract green byte (bits 15-8)
+				blue = v&0xff;       // extract blue byte (bits 7-0)
+				rgb_values = ""+left_pad(''+red,3)+','+left_pad(green,3)+','+left_pad(blue,3);
+				values=values+left_pad(rgb_values,13);
+			}			
+			values=values+"\n";
+		}
+
+	} else {
+		for (y=y_ul; y<y_ul+height; y++) {
+			for (x=x_ul; x<x_ul+height; x++) {
+				v = getPixel(x,y);
+				values=values+v;
+				makeText(v, x, y);
+			}			
+ 
+		}
+	}
+
+	values_first_row = substring(values,0,indexOf(values, '\n'));
+	newImage("temp", "RGB white", getStringWidth(values_first_row), (y-y_ul)*font_height+4, 1);
+	drawString(""+values, 0, font_height+2);
+}

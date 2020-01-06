@@ -1,0 +1,14 @@
+D:\M2\VISA\VISA\TP-LBP-etu\\Resultats-etu\INTERSECTIONCLBP=Marginal-LBP-S_comparaison=intersection_nbVoisins=8_distance=1.txt
+
+ind_test = 0 test=000001.bmp ind_lear = 0 lear=000000.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 1 lear=000002.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 2 lear=000004.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 3 lear=000020.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 4 lear=000022.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 5 lear=000024.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 6 lear=000040.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 7 lear=000042.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 8 lear=000044.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 9 lear=000060.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 10 lear=000062.bmp Intersection hist =0.0000
+ind_test = 0 test=000001.bmp ind_lear = 11 lear=000064.bmp Intersection hist =0.0000

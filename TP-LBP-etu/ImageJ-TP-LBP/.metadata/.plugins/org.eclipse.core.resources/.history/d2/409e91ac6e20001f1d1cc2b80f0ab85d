@@ -1,0 +1,270 @@
+import ij.*;
+import ij.plugin.filter.*;
+import ij.process.*;
+import ij.gui.*;
+import java.awt.*;
+
+public class TESTPlugin_ implements PlugInFilter {
+
+		ImagePlus imp;
+		ImageProcessor ip;
+		int width;
+		int height;
+		
+		public int setup(String arg, ImagePlus imp) {
+			IJ.register(TESTPlugin_.class);
+			if (IJ.versionLessThan("1.32c"))
+				return DONE;
+			//imp.unlock(); //Autoriser (ou pas) les autres threads à modifier l'image source ?
+			this.imp = imp;
+			return DOES_RGB;
+		}
+
+		public void run(ImageProcessor ip) {
+			width = imp.getWidth();
+			height = imp.getHeight();
+
+			String[] orders = {"R-G-R-G", "B-G-B-G", "G-R-G-R", "G-B-G-B"};
+			
+			GenericDialog dia = new GenericDialog("Debayer...", IJ.getInstance());
+	                
+			dia.addChoice("Order of first row:", orders, orders[1]);
+			dia.showDialog();
+
+			if (dia.wasCanceled()) return;		
+
+			int row_order = dia.getNextChoiceIndex();
+			//RGBStackSplitter split_img=new RGBStackSplitter();
+			//split_img.split(imp);	//Splits the RGB image into three 8-bit grayscale images
+			ImagePlus cfa_imp = imp.createImagePlus();
+			//ImageProcessor cfa_ip = cfa(row_order);
+			//cfa_imp.setProcessor("CFA", cfa_ip);
+			//ImageProcessor cfa_ip = cfa_imp.getProcessor();
+
+			// Solution2 : recopier le plan G de l'image couleur, puis compléter avec échantillons R et B. 
+			cfa_imp.setProcessor("CFA", ip.toFloat(1, null).convertToByte(false));	// Recopie le contenu du plan G de ip dans cfa_imp
+			//ByteProcessor cfa_ip = (ByteProcessor)(cfa_imp.getProcessor());
+			//cfa_imp.show();
+			//cfa2(cfa_imp, row_order);	// Complète l'image CFA avec les échantillons R et B 
+			
+			//ImageProcessor cfa = new ByteProcessor(imp.getWidth(),imp.getHeight());
+			//ImageProcessor cfa = cfa_imp.getProcessor();
+			//cfa_imp.setProcessor("CFA", cfa);
+			cfa_imp.show();
+			cfa2(cfa_imp, row_order);
+			cfa_imp.show();
+
+			//rgb_imp.setStack("RGB Stack", rgb);
+		}
+
+		void cfa2(ImagePlus cfa_imp, int row_order) {	// Complète l'image CFA cfa avec les échantillons R et B (G déjà là)
+			ip = imp.getProcessor();
+			ImageProcessor cfa = cfa_imp.getProcessor().convertToByte(false);
+			width = imp.getWidth();
+			height = imp.getHeight();
+			int one = 0; 
+			
+			if (row_order == 0 || row_order == 1) {	//RGR or BGB
+				
+				if (row_order == 0) { //RGR
+					// R samples
+					for (int y=0; y<height; y+=2) {
+						for (int x=0; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int red = (int)(one & 0xff0000)>>16;
+							cfa.putPixel(x,y,red);
+						}
+					}
+					// B samples
+					for (int y=1; y<height; y+=2) {
+						for (int x=1; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int blue = (int)(one & 0x0000ff);
+							cfa.putPixel(x,y,blue);
+						}
+					}
+				} else { //BGB 
+					// B samples
+					for (int y=0; y<height; y+=2) {
+						for (int x=0; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int blue = (int)(one & 0x0000ff);
+							cfa.putPixel(x,y,blue);
+						}
+					}
+					// R samples
+					for (int y=1; y<height; y+=2) {
+						for (int x=1; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int red = (int)(one & 0xff0000)>>16;
+							cfa.putPixel(x,y,red);
+						}
+					}
+				}
+			}
+
+			else if (row_order == 2 || row_order == 3) {	//GRG or GBG
+
+				if (row_order == 2) { //GRG
+					// R samples
+					for (int y=0; y<height; y+=2) {
+						for (int x=1; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int red = (int)(one & 0xff0000)>>16;
+							cfa.putPixel(x,y,red);
+						}
+					}
+					// B samples
+					for (int y=1; y<height; y+=2) {
+						for (int x=0; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int blue = (int)(one & 0x0000ff);
+							cfa.putPixel(x,y,blue);
+						}
+					}
+				} else { //BGB
+					// B Samples
+					for (int y=0; y<height; y+=2) {
+						for (int x=1; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int blue = (int)(one & 0x0000ff);
+							cfa.putPixel(x,y,blue);
+						}
+					}
+					// R samples
+					for (int y=1; y<height; y+=2) {
+						for (int x=0; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int red = (int)(one & 0xff0000)>>16;
+							cfa.putPixel(x,y,red);
+						}
+					}	
+				}
+				
+			}
+
+		}
+		
+		ImageProcessor cfa(int row_order) {			//Image CFA
+			ip = imp.getProcessor();
+			width = imp.getWidth();
+			height = imp.getHeight();
+			int one = 0;
+			ImageProcessor cfa = new ByteProcessor(width,height);
+			
+			//IJ.showMessage(""+row_order);
+			
+			if (row_order == 0 || row_order == 1) {	//RGR or BGB
+				
+				// G samples
+				for (int y=0; y<height; y+=2) {
+					for (int x=1; x<width; x+=2) {
+						one = ip.getPixel(x,y);
+						int green = (int)(one & 0x00ff00)>>8;
+						cfa.putPixel(x,y,green);
+					}
+				}
+				for (int y=1; y<height; y+=2) {
+					for (int x=0; x<width; x+=2) {
+						one = ip.getPixel(x,y);
+						int green = (int)(one & 0x00ff00)>>8;
+						cfa.putPixel(x,y,green);
+					}
+				}
+				
+				if (row_order == 0) { //RGR
+					// R samples
+					for (int y=0; y<height; y+=2) {
+						for (int x=0; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int red = (int)(one & 0xff0000)>>16;
+							cfa.putPixel(x,y,red);
+						}
+					}
+					// B samples
+					for (int y=1; y<height; y+=2) {
+						for (int x=1; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int blue = (int)(one & 0x0000ff);
+							cfa.putPixel(x,y,blue);
+						}
+					}
+				} else { //BGB
+					// B samples
+					for (int y=0; y<height; y+=2) {
+						for (int x=0; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int blue = (int)(one & 0x0000ff);
+							cfa.putPixel(x,y,blue);
+						}
+					}
+					// R samples
+					for (int y=1; y<height; y+=2) {
+						for (int x=1; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int red = (int)(one & 0xff0000)>>16;
+							cfa.putPixel(x,y,red);
+						}
+					}
+				}
+			}
+
+			else if (row_order == 2 || row_order == 3) {	//GRG or GBG
+			
+				// G samples
+				for (int y=0; y<height; y+=2) {
+					for (int x=0; x<width; x+=2) {
+						one = ip.getPixel(x,y);
+						int green = (int)(one & 0x00ff00)>>8;
+						cfa.putPixel(x,y,green);
+					}
+				}
+				for (int y=1; y<height; y+=2) {
+					for (int x=1; x<width; x+=2) {
+						one = ip.getPixel(x,y);
+						int green = (int)(one & 0x00ff00)>>8;
+						cfa.putPixel(x,y,green);
+					}
+				}
+				if (row_order == 2) { //GRG
+					// R samples
+					for (int y=0; y<height; y+=2) {
+						for (int x=1; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int red = (int)(one & 0xff0000)>>16;
+							cfa.putPixel(x,y,red);
+						}
+					}
+					// B samples
+					for (int y=1; y<height; y+=2) {
+						for (int x=0; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int blue = (int)(one & 0x0000ff);
+							cfa.putPixel(x,y,blue);
+						}
+					}
+				} else { //BGB
+					// B Samples
+					for (int y=0; y<height; y+=2) {
+						for (int x=1; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int blue = (int)(one & 0x0000ff);
+							cfa.putPixel(x,y,blue);
+						}
+					}
+					// R samples
+					for (int y=1; y<height; y+=2) {
+						for (int x=0; x<width; x+=2) {
+							one = ip.getPixel(x,y);
+							int red = (int)(one & 0xff0000)>>16;
+							cfa.putPixel(x,y,red);
+						}
+					}	
+				}
+
+			}
+					
+			return cfa;
+		}
+
+}
